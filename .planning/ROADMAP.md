@@ -12,7 +12,7 @@
 | 2 | Gmail Provider | Gmail API integration via provider interface | NAV-01, NAV-02, NAV-03, ORG-04 | 4 |
 | 3 | Core Commands | 1/2 | In Progress|  |
 | 4 | Email Management | 3/3 | Complete   | 2026-04-04 |
-| 5 | Multi-Provider | 1/2 | In Progress|  |
+| 5 | Multi-Provider | 2/2 | Complete   | 2026-04-04 |
 | 6 | Polish | Batch operations, error output, startup optimization | — | — |
 
 ---
@@ -137,7 +137,7 @@
 
 ### Plans
 - [x] 05-01-PLAN.md — Outlook OAuth module + error codes (wave 1) ✓
-- [ ] 05-02-PLAN.md — OutlookProvider + CLI --account flag (wave 2)
+- [x] 05-02-PLAN.md — OutlookProvider + CLI --account flag (wave 2)
 
 ---
 
