@@ -13,9 +13,9 @@
 
 ### Mailbox Navigation
 
-- [ ] **NAV-01**: User can list emails in inbox (pagination support)
-- [ ] **NAV-02**: User can list emails in a specific folder/label (provider-native name)
-- [ ] **NAV-03**: User can view mailbox status (unread count, total messages)
+- [x] **NAV-01**: User can list emails in inbox (pagination support)
+- [x] **NAV-02**: User can list emails in a specific folder/label (provider-native name)
+- [x] **NAV-03**: User can view mailbox status (unread count, total messages)
 
 ### Read Email
 
@@ -39,7 +39,7 @@
 - [ ] **ORG-01**: User can mark email as read/unread
 - [ ] **ORG-02**: User can move email to folder/label (provider-native folder name)
 - [ ] **ORG-03**: User can trash/delete email
-- [ ] **ORG-04**: User can list available folders/labels
+- [x] **ORG-04**: User can list available folders/labels
 
 ## v2 Requirements
 
@@ -76,9 +76,9 @@
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 1 | Complete |
-| NAV-01 | Phase 2 | Pending |
-| NAV-02 | Phase 2 | Pending |
-| NAV-03 | Phase 2 | Pending |
+| NAV-01 | Phase 2 | Complete |
+| NAV-02 | Phase 2 | Complete |
+| NAV-03 | Phase 2 | Complete |
 | READ-01 | Phase 3 | Pending |
 | READ-02 | Phase 3 | Pending |
 | SCH-01 | Phase 3 | Pending |
@@ -90,7 +90,7 @@
 | ORG-01 | Phase 4 | Pending |
 | ORG-02 | Phase 4 | Pending |
 | ORG-03 | Phase 4 | Pending |
-| ORG-04 | Phase 2 | Pending |
+| ORG-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 18 total
