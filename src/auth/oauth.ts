@@ -7,6 +7,7 @@ const SERVICE = "mail-cli";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
+  "https://www.googleapis.com/auth/userinfo.email",
 ];
 
 const oauth2Client = new google.auth.OAuth2(
@@ -55,18 +56,30 @@ export async function getAccessToken(): Promise<{
   });
 
   // Exchange code for tokens
-  const tokens = await oauth2Client.getToken(code);
+  const { tokens } = await oauth2Client.getToken(code);
 
-  // Extract email from id_token payload if available
-  let email = "";
-  if (tokens.tokens.id_token) {
-    const payload = JSON.parse(
-      Buffer.from(tokens.tokens.id_token.split(".")[1], "base64").toString()
-    );
-    email = payload.email || "";
+  // Fetch user email from Google API
+  const userInfo = await fetch(
+    "https://www.googleapis.com/oauth2/v2/userinfo",
+    {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    }
+  );
+  const userData = await userInfo.json();
+
+  if (!userInfo.ok) {
+    throw new Error(`Google API error: ${JSON.stringify(userData)}`);
   }
 
-  return { tokens: tokens.tokens, email };
+  const email = userData.email;
+
+  if (!email) {
+    throw new Error("Failed to get user email from Google");
+  }
+
+  return { tokens, email };
 }
 
 /**
