@@ -1,4 +1,4 @@
-import { simpleParser, type ParsedMail } from "mailparser";
+import { simpleParser, type ParsedMail, type AddressObject, type EmailAddress } from "mailparser";
 import type { Email, Attachment } from "../providers/email-provider.js";
 
 /**
@@ -31,11 +31,11 @@ export async function parseGmailRaw(
 
 	// D-03: Extract body.text, falling back to html if no plain text
 	const bodyText =
-		parsed.body?.text || parsed.text || parsed.body?.html || parsed.html || "";
+		parsed.text || parsed.html || "";
 
 	// D-03: Extract attachments array
 	const attachments: Attachment[] =
-		parsed.attachments?.map((att, idx) => ({
+		parsed.attachments?.map((att: { filename?: string; contentType?: string; size?: number }, idx: number) => ({
 			id: String(idx),
 			filename: att.filename || "attachment",
 			mimeType: att.contentType || "application/octet-stream",
@@ -43,8 +43,21 @@ export async function parseGmailRaw(
 		})) || [];
 
 	// Extract address headers using mailparser's Address objects
-	const fromAddress = parsed.from?.value?.[0]?.address || "";
-	const toAddresses = parsed.to?.value?.map((a) => a.address || "") || [];
+	// from and to can be AddressObject | AddressObject[] | undefined
+	function getAddress(addressObj: AddressObject | AddressObject[] | undefined): string {
+		if (!addressObj) return "";
+		if (Array.isArray(addressObj)) return addressObj[0]?.value[0]?.address || "";
+		return addressObj.value[0]?.address || "";
+	}
+	function getAddresses(addressObj: AddressObject | AddressObject[] | undefined): string[] {
+		if (!addressObj) return [];
+		if (Array.isArray(addressObj)) {
+			return addressObj.flatMap((ao: AddressObject) => ao.value.map((a: EmailAddress) => a.address || ""));
+		}
+		return addressObj.value.map((a: EmailAddress) => a.address || "");
+	}
+	const fromAddress = getAddress(parsed.from);
+	const toAddresses = getAddresses(parsed.to);
 
 	return {
 		id: options.id,

@@ -67,7 +67,7 @@ export async function getAccessToken(): Promise<{
 			},
 		},
 	);
-	const userData = await userInfo.json();
+	const userData = (await userInfo.json()) as { email?: string };
 
 	if (!userInfo.ok) {
 		throw new Error(`Google API error: ${JSON.stringify(userData)}`);

@@ -9,11 +9,12 @@ export class CLIError extends Error {
 	}
 
 	toJSON() {
+		const detailsObj = this.details ? { details: this.details } : {};
 		return {
 			error: {
 				code: this.code,
 				message: this.message,
-				...(this.details && { details: this.details }),
+				...detailsObj,
 			},
 		};
 	}

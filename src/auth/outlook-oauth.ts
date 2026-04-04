@@ -1,6 +1,6 @@
-import { PublicClientApplication, type CachePlugin } from "@azure/msal-node";
+import { PublicClientApplication, type ICachePlugin } from "@azure/msal-node";
 import { saveTokens, getTokens } from "./oauth.js";
-import { mkdir } from "bun:fs";
+import { mkdir } from "node:fs/promises";
 import { join } from "path";
 
 const OUTLOOK_CLIENT_ID = process.env.OUTLOOK_CLIENT_ID;
@@ -42,7 +42,7 @@ async function writeCache(cache: string): Promise<void> {
  * Create a cache plugin for MSAL to persist tokens to disk.
  * This enables silent token refresh across CLI invocations.
  */
-function createCachePlugin(): CachePlugin {
+function createCachePlugin(): ICachePlugin {
 	return {
 		beforeCacheAccess: async (cacheContext) => {
 			cacheContext.tokenCache.deserialize(await readCache());

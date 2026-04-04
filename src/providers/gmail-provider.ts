@@ -57,7 +57,7 @@ export class GmailProvider extends EmailProvider {
 			});
 
 			const messages = listResponse.data.messages || [];
-			const nextPageToken = listResponse.data.nextPageToken;
+			const nextPageToken = listResponse.data.nextPageToken ?? undefined;
 
 			// Fetch metadata for each message (headers + labels)
 			const emails = await Promise.all(
@@ -70,12 +70,13 @@ export class GmailProvider extends EmailProvider {
 					});
 
 					const headers = detail.data.payload?.headers || [];
-					const getHeader = (name: string) =>
-						headers.find((h) => h.name === name)?.value || "";
+					const getHeader = (name: string): string =>
+						headers.find((h) => h.name === name)?.value ?? "";
 
 					return {
 						id: msg.id!,
 						from: getHeader("From"),
+						to: [] as string[],
 						subject: getHeader("Subject"),
 						date: getHeader("Date"),
 						flags: detail.data.labelIds || [],
@@ -206,13 +207,14 @@ export class GmailProvider extends EmailProvider {
 					});
 
 					const headers = detail.data.payload?.headers || [];
-					const getHeader = (name: string) =>
-						headers.find((h) => h.name === name)?.value || "";
+					const getHeader = (name: string): string =>
+						headers.find((h) => h.name === name)?.value ?? "";
 
 					return {
 						id: msg.id!,
 						threadId: msg.threadId!,
 						from: getHeader("From"),
+						to: [] as string[],
 						subject: getHeader("Subject"),
 						date: getHeader("Date"),
 						flags: detail.data.labelIds || [],
@@ -240,7 +242,7 @@ export class GmailProvider extends EmailProvider {
 			const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
 			// D-12: Build MIME with nodemailer, encode to base64url
-			const rawBase64Url = buildRawMessage({
+			const rawBase64Url = await buildRawMessage({
 				to: msg.to,
 				cc: msg.cc,
 				bcc: msg.bcc,
@@ -294,7 +296,7 @@ export class GmailProvider extends EmailProvider {
 			// D-14: Prepend "Re: " if not already present (handled in buildReplyMessage)
 			// D-15: Body is always empty (handled in buildReplyMessage)
 
-			const rawBase64Url = buildReplyMessage({
+			const rawBase64Url = await buildReplyMessage({
 				to: msg.to,
 				subject: originalSubject,
 				inReplyTo,

@@ -9,6 +9,8 @@ import {
 } from "./auth/index.js";
 import { getOutlookAuthToken } from "./auth/outlook-oauth.js";
 import type { Email } from "./providers/email-provider.js";
+import { GmailProvider } from "./providers/gmail-provider.js";
+import { OutlookProvider } from "./providers/outlook-provider.js";
 import { CLIError, printError } from "./utils/errors.js";
 
 const program = new Command();
@@ -47,7 +49,7 @@ async function resolveProvider(
 			);
 		}
 		if (accounts.length === 1) {
-			account = accounts[0];
+			account = accounts[0]!;
 		} else {
 			throw new CLIError(
 				"MULTIPLE_ACCOUNTS",

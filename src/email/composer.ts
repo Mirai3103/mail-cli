@@ -14,7 +14,7 @@ export function base64UrlEncode(buffer: Buffer): string {
  * Build a raw MIME message for Gmail API from email options.
  * Returns base64url-encoded string ready for Gmail API's raw field.
  */
-export function buildRawMessage(options: {
+export async function buildRawMessage(options: {
 	to: string[];
 	cc?: string[];
 	bcc?: string[];
@@ -23,7 +23,7 @@ export function buildRawMessage(options: {
 	html?: string;
 	headers?: Record<string, string>;
 	attachments?: string[];
-}): string {
+}): Promise<string> {
 	const mailComposer = new MailComposer({
 		to: options.to.join(", "),
 		cc: options.cc?.join(", "),
@@ -38,8 +38,8 @@ export function buildRawMessage(options: {
 		})),
 	});
 
-	// build() returns Buffer of RFC 2822 message
-	const messageBuffer = mailComposer.compile().build() as Buffer;
+	// build() returns Promise<Buffer> of RFC 2822 message
+	const messageBuffer = await mailComposer.compile().build();
 	return base64UrlEncode(messageBuffer);
 }
 
@@ -49,18 +49,18 @@ export function buildRawMessage(options: {
  * Per D-14: Prepends "Re: " if subject doesn't already start with it.
  * Per D-15: Body is always empty.
  */
-export function buildReplyMessage(options: {
+export async function buildReplyMessage(options: {
 	to: string[]; // Reply recipients (From of original message)
 	subject: string; // Original subject (will prepend "Re: " if needed)
 	inReplyTo: string; // In-Reply-To header value (original Message-ID)
 	references: string; // References header value (original References + Message-ID)
-}): string {
+}): Promise<string> {
 	// D-14: Prepend "Re: " if not already present
 	const replySubject = options.subject.match(/^Re:\s*/i)
 		? options.subject
 		: `Re: ${options.subject}`;
 
-	return buildRawMessage({
+	return await buildRawMessage({
 		to: options.to,
 		subject: replySubject,
 		text: "", // D-15: empty body per SEND-04 spec

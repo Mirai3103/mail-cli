@@ -45,9 +45,9 @@ export abstract class EmailProvider {
 	abstract getAuthToken(): Promise<string>;
 
 	// Mailbox operations
-	abstract list(): Promise<Email[]>;
+	abstract list(folder?: string, limit?: number): Promise<{ emails: Email[]; nextPageToken?: string }>;
 	abstract read(id: string): Promise<Email>;
-	abstract search(query: string): Promise<Email[]>;
+	abstract search(query: string, limit?: number): Promise<Email[]>;
 	abstract send(msg: SendEmailOptions): Promise<string>;
 	abstract reply(id: string, msg: SendEmailOptions): Promise<string>;
 	abstract mark(id: string, read: boolean): Promise<void>;
