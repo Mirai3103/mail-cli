@@ -19,6 +19,7 @@ A developer tool that lets you read, compose, search, and manage email from any 
 - [x] Compose: Send new emails via `--to`, `--subject`, `--body`, `--body-file-path` (Phase 3: SEND-01, SEND-02)
 - [x] Reply: Send reply with threading headers, empty body (Phase 3: SEND-04)
 - [x] Organization: Mark read/unread, trash/delete, move to folder, attachments (Phase 4: ORG-01, ORG-02, ORG-03, SEND-03)
+- [x] Multi-provider: Outlook/Office 365 support via Microsoft Graph API with MSAL OAuth2, multi-account CLI via --account flag (Phase 5: AUTH-04)
 
 ### Active
 
@@ -61,4 +62,4 @@ A developer tool that lets you read, compose, search, and manage email from any 
 
 ---
 
-*Last updated: 2026-04-04 after Phase 4 completion*
+*Last updated: 2026-04-04 after Phase 5 completion*
