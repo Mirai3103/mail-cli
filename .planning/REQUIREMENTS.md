@@ -19,20 +19,20 @@
 
 ### Read Email
 
-- [ ] **READ-01**: User can read a single email by ID (headers, body text, attachments list)
-- [ ] **READ-02**: User can read email thread (messages in conversation via thread ID)
+- [x] **READ-01**: User can read a single email by ID (headers, body text, attachments list)
+- [x] **READ-02**: User can read email thread (messages in conversation via thread ID)
 
 ### Search
 
-- [ ] **SCH-01**: User can search emails using provider's native search syntax
-- [ ] **SCH-02**: Search results returned as JSON array
+- [x] **SCH-01**: User can search emails using provider's native search syntax
+- [x] **SCH-02**: Search results returned as JSON array
 
 ### Compose & Send
 
-- [ ] **SEND-01**: User can send a new email with --to, --subject, --body flags
-- [ ] **SEND-02**: User can send email with body from file (--body-file-path)
+- [x] **SEND-01**: User can send a new email with --to, --subject, --body flags
+- [x] **SEND-02**: User can send email with body from file (--body-file-path)
 - [ ] **SEND-03**: User can send email with attachments (--attach flag, multiple allowed)
-- [ ] **SEND-04**: User can reply to existing thread (References/In-Reply-To headers set, body empty)
+- [x] **SEND-04**: User can reply to existing thread (References/In-Reply-To headers set, body empty)
 
 ### Organization
 
@@ -79,14 +79,14 @@
 | NAV-01 | Phase 2 | Complete |
 | NAV-02 | Phase 2 | Complete |
 | NAV-03 | Phase 2 | Complete |
-| READ-01 | Phase 3 | Pending |
-| READ-02 | Phase 3 | Pending |
-| SCH-01 | Phase 3 | Pending |
-| SCH-02 | Phase 3 | Pending |
-| SEND-01 | Phase 3 | Pending |
-| SEND-02 | Phase 3 | Pending |
+| READ-01 | Phase 3 | Complete |
+| READ-02 | Phase 3 | Complete |
+| SCH-01 | Phase 3 | Complete |
+| SCH-02 | Phase 3 | Complete |
+| SEND-01 | Phase 3 | Complete |
+| SEND-02 | Phase 3 | Complete |
 | SEND-03 | Phase 4 | Pending |
-| SEND-04 | Phase 3 | Pending |
+| SEND-04 | Phase 3 | Complete |
 | ORG-01 | Phase 4 | Pending |
 | ORG-02 | Phase 4 | Pending |
 | ORG-03 | Phase 4 | Pending |
