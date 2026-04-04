@@ -13,10 +13,10 @@ A developer tool that lets you read, compose, search, and manage email from any 
 ### Validated
 
 - [x] Account management: Add/remove/list email accounts via OAuth2 (Phase 1: AUTH-01, AUTH-02, AUTH-03)
+- [x] Mailbox navigation: List inbox, list emails in folders, mailbox status, folder listing (Phase 2: NAV-01, NAV-02, NAV-03, ORG-04)
 
 ### Active
 
-- [ ] Mailbox navigation: List inbox, list recent emails, navigate folders/labels
 - [ ] Mailbox navigation: List inbox, list recent emails, navigate folders/labels
 - [ ] Search: Server-side search via provider's native search (Gmail search syntax / Outlook filters)
 - [ ] Read email: Display email content in terminal (headers, body, attachments list)
@@ -62,4 +62,4 @@ A developer tool that lets you read, compose, search, and manage email from any 
 
 ---
 
-*Last updated: 2026-04-04 after Phase 1 completion*
+*Last updated: 2026-04-04 after Phase 2 completion*
