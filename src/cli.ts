@@ -7,8 +7,6 @@ import {
 	deleteTokens,
 	saveTokens,
 } from "./auth/index.js";
-import { GmailProvider } from "./providers/gmail-provider.js";
-import { OutlookProvider } from "./providers/outlook-provider.js";
 import { getOutlookAuthToken } from "./auth/outlook-oauth.js";
 import type { Email } from "./providers/email-provider.js";
 import { CLIError, printError } from "./utils/errors.js";
@@ -70,11 +68,14 @@ async function resolveProvider(
 	// Gmail: "me@gmail.com:gmail" -> provider=gmail
 	// Outlook: "me@outlook.com:outlook" -> provider=outlook
 	if (account.endsWith(":gmail")) {
+		const { GmailProvider } = await import("./providers/gmail-provider.js");
 		return new GmailProvider(account);
 	} else if (account.endsWith(":outlook")) {
+		const { OutlookProvider } = await import("./providers/outlook-provider.js");
 		return new OutlookProvider(account);
 	} else {
 		// Backwards compat: assume Gmail for accounts without suffix
+		const { GmailProvider } = await import("./providers/gmail-provider.js");
 		return new GmailProvider(account);
 	}
 }
