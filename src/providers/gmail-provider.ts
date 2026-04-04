@@ -345,7 +345,28 @@ export class GmailProvider extends EmailProvider {
   }
 
   async move(id: string, folder: string): Promise<void> {
-    throw new Error("Not implemented - Phase 2");
+    try {
+      const accessToken = await this.getAuthToken();
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({ access_token: accessToken });
+
+      const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
+      await gmail.users.messages.modify({
+        userId: "me",
+        id,
+        requestBody: {
+          addLabelIds: [folder],  // provider-native label name per D-09
+        },
+      });
+    } catch (err) {
+      if (err instanceof CLIError) throw err;
+      throw new CLIError(
+        "GMAIL_API_ERROR",
+        `Failed to move message ${id} to ${folder}`,
+        err
+      );
+    }
   }
 
   async delete(id: string): Promise<void> {
