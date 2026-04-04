@@ -1,4 +1,3 @@
-import "isomorphic-fetch";
 import { PublicClientApplication } from "@azure/msal-node";
 import { saveTokens, getTokens } from "./oauth.js";
 
