@@ -71,7 +71,7 @@ Plan: Not started
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260404-wos | Fix Outlook OAuth invalid_grant error | 2026-04-04 | b5c80b8 | [260404-wos-fix-outlook-oauth-invalid-grant-error](./quick/260404-wos-fix-outlook-oauth-invalid-grant-error/) |
+| 260404-wos | Fix Outlook OAuth invalid_grant error | 2026-04-04 | d63c734 | [260404-wos-fix-outlook-oauth-invalid-grant-error](./quick/260404-wos-fix-outlook-oauth-invalid-grant-error/) |
 
 ## Accumulated Context
 
@@ -120,7 +120,7 @@ None identified yet.
 | 4 | 2026-04-04 | Phase 5 context gathered (Multi-Provider) |
 | 5 | 2026-04-04 | Phase 5 plan 01 executed (Outlook OAuth foundation) |
 | 6 | 2026-04-04 | Phase 6 plan 01 executed (config file system) |
-| 7 | 2026-04-04 | Quick task: fix Outlook OAuth invalid_grant (PCA singleton, token storage fix) |
+| 7 | 2026-04-04 | Quick task: fix Outlook OAuth invalid_grant (MSAL cache persistence, keytar account suffix fix) |
 
 ---
 
