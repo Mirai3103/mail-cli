@@ -62,7 +62,7 @@
 
 ### Plans
 - [x] 02-01-PLAN.md — Interface updates (Folder.type, EmailProvider.status())
-- [ ] 02-02-PLAN.md — GmailProvider implementation + CLI commands
+- [x] 02-02-PLAN.md — GmailProvider implementation + CLI commands
 
 ---
 
