@@ -1,7 +1,7 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 import { refreshOutlookToken } from "../auth/outlook-oauth.js";
 import { CLIError } from "../utils/errors.js";
-import type { Email, Folder, SendEmailOptions, Attachment } from "./email-provider.js";
+import { EmailProvider, type Email, type Folder, type SendEmailOptions, type Attachment } from "./email-provider.js";
 
 export class OutlookProvider extends EmailProvider {
 	readonly provider = "outlook";
