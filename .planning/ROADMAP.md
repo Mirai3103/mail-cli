@@ -8,7 +8,7 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | Foundation | 1/2 | In Progress|  |
+| 1 | Foundation | 2/2 | Complete | AUTH-01, AUTH-02, AUTH-03 |
 | 2 | Gmail Provider | Gmail API integration via provider interface | NAV-01, NAV-02, NAV-03, ORG-04 | 4 |
 | 3 | Core Commands | list, read, search, send, reply with JSON output | READ-01, READ-02, SCH-01, SCH-02, SEND-01, SEND-02, SEND-04 | 7 |
 | 4 | Email Management | move, delete, mark read/unread + attachments | SEND-03, ORG-01, ORG-02, ORG-03 | 4 |
@@ -37,7 +37,7 @@
 
 ### Plans
 - [x] 01-01-PLAN.md — Foundation (interface, stubs, utilities)
-- [ ] 01-02-PLAN.md — OAuth2 + account commands
+- [x] 01-02-PLAN.md — OAuth2 + account commands
 
 ---
 
