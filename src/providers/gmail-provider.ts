@@ -242,6 +242,7 @@ export class GmailProvider extends EmailProvider {
         bcc: msg.bcc,
         subject: msg.subject,
         text: msg.body,
+        attachments: msg.attachments,
       });
 
       const sendResponse = await gmail.users.messages.send({
@@ -370,7 +371,29 @@ export class GmailProvider extends EmailProvider {
   }
 
   async delete(id: string): Promise<void> {
-    throw new Error("Not implemented - Phase 2");
+    try {
+      const accessToken = await this.getAuthToken();
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({ access_token: accessToken });
+
+      const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
+      // D-01: Trash, not permanent delete
+      await gmail.users.messages.modify({
+        userId: "me",
+        id,
+        requestBody: {
+          addLabelIds: ["TRASH"],
+        },
+      });
+    } catch (err) {
+      if (err instanceof CLIError) throw err;
+      throw new CLIError(
+        "GMAIL_API_ERROR",
+        `Failed to trash message ${id}`,
+        err
+      );
+    }
   }
 
   async status(): Promise<{ unread: number; total: number }> {
