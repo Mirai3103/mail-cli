@@ -252,7 +252,7 @@ program
     }
   });
 
-// Send command - SEND-01, SEND-02
+// Send command - SEND-01, SEND-02, SEND-03
 program
   .command("send")
   .description("Send a new email")
@@ -262,6 +262,7 @@ program
   .option("--body-file-path <path>", "Path to file containing email body")
   .option("--cc <addresses>", "CC recipients (comma-separated)")
   .option("--bcc <addresses>", "BCC recipients (comma-separated)")
+  .option("--attach <path>", "Attachment file path (can be repeated)", [])
   .action(async (options) => {
     try {
       const accounts = await listAccounts();
@@ -292,12 +293,26 @@ program
       const cc = options.cc ? options.cc.split(",").map((s: string) => s.trim()) : undefined;
       const bcc = options.bcc ? options.bcc.split(",").map((s: string) => s.trim()) : undefined;
 
+      // D-03, D-04: Validate and collect attachments
+      const attachments: string[] = [];
+      if (options.attach) {
+        const attachPaths = Array.isArray(options.attach) ? options.attach : [options.attach];
+        for (const path of attachPaths) {
+          const file = Bun.file(path);
+          if (!await file.exists()) {
+            throw new CLIError("FILE_NOT_FOUND", `Attachment file not found: ${path}`);
+          }
+          attachments.push(path);
+        }
+      }
+
       const result = await provider.send({
         to,
         cc,
         bcc,
         subject: options.subject,
         body,
+        attachments,
       });
 
       // Return the sent message ID
@@ -342,6 +357,93 @@ program
 
       // Return the sent message ID
       console.log(JSON.stringify({ id: result }));
+    } catch (err) {
+      printError(err as Error);
+      process.exit(1);
+    }
+  });
+
+// Mark command - ORG-01
+program
+  .command("mark")
+  .description("Mark email as read or unread")
+  .argument("<id>", "Email ID")
+  .option("--read", "Mark as read")
+  .option("--unread", "Mark as unread")
+  .action(async (id, options) => {
+    try {
+      // D-02: Mutually exclusive --read and --unread
+      if (!options.read && !options.unread) {
+        throw new CLIError(
+          "MISSING_FLAG",
+          "Either --read or --unread must be specified"
+        );
+      }
+      if (options.read && options.unread) {
+        throw new CLIError(
+          "CONFLICTING_FLAGS",
+          "Cannot use both --read and --unread"
+        );
+      }
+
+      const accounts = await listAccounts();
+      if (accounts.length === 0) {
+        throw new CLIError("NO_ACCOUNTS", "No accounts configured.");
+      }
+
+      const account = accounts[0];
+      const provider = new GmailProvider(account);
+      await provider.mark(id, !!options.read);
+
+      // D-05: Output {"ok": true}
+      console.log(JSON.stringify({ ok: true }));
+    } catch (err) {
+      printError(err as Error);
+      process.exit(1);
+    }
+  });
+
+// Move command - ORG-02
+program
+  .command("move")
+  .description("Move email to a folder/label")
+  .argument("<id>", "Email ID")
+  .requiredOption("--folder <name>", "Target folder/label name (provider-native)")
+  .action(async (id, options) => {
+    try {
+      const accounts = await listAccounts();
+      if (accounts.length === 0) {
+        throw new CLIError("NO_ACCOUNTS", "No accounts configured.");
+      }
+
+      const account = accounts[0];
+      const provider = new GmailProvider(account);
+      await provider.move(id, options.folder);
+
+      console.log(JSON.stringify({ ok: true }));
+    } catch (err) {
+      printError(err as Error);
+      process.exit(1);
+    }
+  });
+
+// Delete command - ORG-03
+program
+  .command("delete")
+  .description("Move email to trash")
+  .argument("<id>", "Email ID")
+  .action(async (id) => {
+    try {
+      const accounts = await listAccounts();
+      if (accounts.length === 0) {
+        throw new CLIError("NO_ACCOUNTS", "No accounts configured.");
+      }
+
+      const account = accounts[0];
+      const provider = new GmailProvider(account);
+      await provider.delete(id);
+
+      console.log(JSON.stringify({ ok: true }));
     } catch (err) {
       printError(err as Error);
       process.exit(1);
