@@ -317,7 +317,31 @@ export class GmailProvider extends EmailProvider {
   }
 
   async mark(id: string, read: boolean): Promise<void> {
-    throw new Error("Not implemented - Phase 2");
+    try {
+      const accessToken = await this.getAuthToken();
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({ access_token: accessToken });
+
+      const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
+      await gmail.users.messages.modify({
+        userId: "me",
+        id,
+        requestBody: {
+          // read=true means remove UNREAD (mark as read)
+          // read=false means add UNREAD (mark as unread)
+          removeLabelIds: read ? ["UNREAD"] : [],
+          addLabelIds: read ? [] : ["UNREAD"],
+        },
+      });
+    } catch (err) {
+      if (err instanceof CLIError) throw err;
+      throw new CLIError(
+        "GMAIL_API_ERROR",
+        `Failed to mark message ${id}`,
+        err
+      );
+    }
   }
 
   async move(id: string, folder: string): Promise<void> {
