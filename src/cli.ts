@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import "isomorphic-fetch";
 import { Command, Option } from "commander";
 import {
 	getAccessToken,

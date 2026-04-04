@@ -30,7 +30,6 @@
 		"commander": "^14.0.3",
 		"figlet": "^1.11.0",
 		"googleapis": "^171.4.0",
-		"isomorphic-fetch": "^3.0.0",
 		"keytar": "^7.9.0",
 		"mailparser": "^3.9.6",
 		"nodemailer": "^8.0.4",
