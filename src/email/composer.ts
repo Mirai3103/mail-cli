@@ -22,6 +22,7 @@ export function buildRawMessage(options: {
   text?: string;
   html?: string;
   headers?: Record<string, string>;
+  attachments?: string[];
 }): string {
   const mailComposer = new MailComposer({
     to: options.to.join(", "),
@@ -31,6 +32,10 @@ export function buildRawMessage(options: {
     text: options.text,
     html: options.html,
     headers: options.headers,
+    attachments: options.attachments?.map(path => ({
+      filename: path.split("/").pop() || path,
+      path,
+    })),
   });
 
   // build() returns Buffer of RFC 2822 message
