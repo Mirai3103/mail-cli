@@ -3,6 +3,20 @@ import { saveTokens, getTokens } from "./oauth.js";
 
 const OUTLOOK_CLIENT_ID = process.env.OUTLOOK_CLIENT_ID;
 
+// Module-level PCA singleton so MSAL's token cache persists across calls
+let pca: PublicClientApplication | null = null;
+
+function getPCA(): PublicClientApplication {
+	if (!pca) {
+		pca = new PublicClientApplication({
+			auth: {
+				clientId: OUTLOOK_CLIENT_ID || "",
+			},
+		});
+	}
+	return pca;
+}
+
 export const OUTLOOK_SCOPES = [
 	"Mail.Read",
 	"Mail.Send",
@@ -21,13 +35,9 @@ export async function getOutlookAuthToken(email: string): Promise<void> {
 		throw new Error("OUTLOOK_CLIENT_ID environment variable is not set");
 	}
 
-	const pca = new PublicClientApplication({
-		auth: {
-			clientId: OUTLOOK_CLIENT_ID,
-		},
-	});
+	const pcaInstance = getPCA();
 
-	const authResult = await pca.acquireTokenByDeviceCode({
+	const authResult = await pcaInstance.acquireTokenByDeviceCode({
 		deviceCodeCallback: (response) => {
 			console.log(response.message);
 		},
@@ -40,7 +50,8 @@ export async function getOutlookAuthToken(email: string): Promise<void> {
 		const keytarAccount = `${accountEmail}:outlook`;
 		await saveTokens(keytarAccount, {
 			accessToken: authResult.accessToken,
-			refreshToken: authResult.account.idTokenClaims?.oid || "",
+			// Store homeAccountId as MSAL lookup key - MSAL handles refresh internally via its cache
+			refreshToken: authResult.account.homeAccountId,
 			expiresAt: authResult.expiresOn?.getTime(),
 			tenantId: authResult.tenantId,
 			homeAccountId: authResult.account.homeAccountId,
@@ -71,11 +82,8 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 		localAccountId?: string;
 	};
 
-	const pca = new PublicClientApplication({
-		auth: {
-			clientId: OUTLOOK_CLIENT_ID || "",
-		},
-	});
+	// Reuse PCA singleton so MSAL's token cache persists across calls
+	const pcaInstance = getPCA();
 
 	// MSAL requires account object for silent token acquisition
 	// If we have proper account info stored, try silent flow first
@@ -89,7 +97,7 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 				username: email,
 			};
 
-			const refreshResult = await pca.acquireTokenSilent({
+			const refreshResult = await pcaInstance.acquireTokenSilent({
 				scopes: [...OUTLOOK_SCOPES],
 				account,
 			});
@@ -98,7 +106,7 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 				// Save refreshed tokens
 				await saveTokens(keytarAccount, {
 					accessToken: refreshResult.accessToken,
-					refreshToken: tokenObj.refreshToken,
+					refreshToken: refreshResult.account?.homeAccountId || tokenObj.refreshToken,
 					expiresAt: refreshResult.expiresOn?.getTime(),
 					tenantId: refreshResult.tenantId,
 					homeAccountId: refreshResult.account?.homeAccountId || tokenObj.homeAccountId,
@@ -112,7 +120,7 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 	}
 
 	// Fall back to device code flow for token refresh
-	const authResult = await pca.acquireTokenByDeviceCode({
+	const authResult = await pcaInstance.acquireTokenByDeviceCode({
 		deviceCodeCallback: (response) => {
 			console.log(response.message);
 		},
@@ -123,7 +131,7 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 		const accountEmail = authResult.account?.username || email;
 		await saveTokens(`${accountEmail}:outlook`, {
 			accessToken: authResult.accessToken,
-			refreshToken: authResult.account?.idTokenClaims?.oid || tokenObj.refreshToken,
+			refreshToken: authResult.account?.homeAccountId || tokenObj.refreshToken,
 			expiresAt: authResult.expiresOn?.getTime(),
 			tenantId: authResult.tenantId,
 			homeAccountId: authResult.account?.homeAccountId || tokenObj.homeAccountId,
