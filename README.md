@@ -18,6 +18,12 @@ npm install -g @laffy1309/emailcli
 
 ### 1. Configure OAuth Credentials
 
+Detailed setup guides:
+- **[Gmail Setup Guide](docs/gmail.md)** - Google Cloud Console configuration
+- **[Outlook Setup Guide](docs/outlook.md)** - Azure AD app registration
+
+**Quick Summary:**
+
 **Option A: Environment Variables (Recommended)**
 
 Set these before running:
@@ -56,7 +62,7 @@ emailcli account add --provider gmail
 emailcli account add --provider outlook
 ```
 
-This opens an OAuth browser flow. Complete authentication in your browser.
+This opens an OAuth browser flow (Gmail) or device code flow (Outlook). Complete authentication in your browser.
 
 ## Commands
 
