@@ -13,7 +13,7 @@
 | 3 | Core Commands | 1/2 | In Progress|  |
 | 4 | Email Management | 3/3 | Complete   | 2026-04-04 |
 | 5 | Multi-Provider | 2/2 | Complete   | 2026-04-04 |
-| 6 | Polish | 3/3 | Complete   | 2026-04-04 |
+| 6 | Polish | 5/5 | Complete   | 2026-04-04 |
 
 ---
 
