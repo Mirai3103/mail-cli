@@ -6,7 +6,7 @@
 		"emailcli": "./dist/cli.cjs"
 	},
 	"homepage": "https://github.com/Mirai3103/mail-cli",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"scripts": {
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
@@ -37,5 +37,10 @@
 		"nodemailer": "^8.0.4",
 		"ora": "^9.3.0",
 		"picocolors": "^1.1.1"
-	}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	]
 }
