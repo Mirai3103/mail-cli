@@ -112,7 +112,7 @@
 - Provider-native folder names (no abstraction)
 
 ### Plans
-- [ ] 04-01-PLAN.md — GmailProvider.mark(), move(), delete() implementations
+- [x] 04-01-PLAN.md — GmailProvider.mark(), move(), delete() implementations
 - [ ] 04-02-PLAN.md — Attachment support (buildRawMessage, GmailProvider.send attachments, --attach flag)
 - [ ] 04-03-PLAN.md — CLI mark, move, delete commands
 

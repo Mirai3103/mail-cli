@@ -36,9 +36,9 @@
 
 ### Organization
 
-- [ ] **ORG-01**: User can mark email as read/unread
-- [ ] **ORG-02**: User can move email to folder/label (provider-native folder name)
-- [ ] **ORG-03**: User can trash/delete email
+- [x] **ORG-01**: User can mark email as read/unread
+- [x] **ORG-02**: User can move email to folder/label (provider-native folder name)
+- [x] **ORG-03**: User can trash/delete email
 - [x] **ORG-04**: User can list available folders/labels
 
 ## v2 Requirements
@@ -87,9 +87,9 @@
 | SEND-02 | Phase 3 | Complete |
 | SEND-03 | Phase 4 | Pending |
 | SEND-04 | Phase 3 | Complete |
-| ORG-01 | Phase 4 | Pending |
-| ORG-02 | Phase 4 | Pending |
-| ORG-03 | Phase 4 | Pending |
+| ORG-01 | Phase 4 | Complete |
+| ORG-02 | Phase 4 | Complete |
+| ORG-03 | Phase 4 | Complete |
 | ORG-04 | Phase 2 | Complete |
 
 **Coverage:**
