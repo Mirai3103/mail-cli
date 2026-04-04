@@ -31,7 +31,7 @@
 
 - [x] **SEND-01**: User can send a new email with --to, --subject, --body flags
 - [x] **SEND-02**: User can send email with body from file (--body-file-path)
-- [ ] **SEND-03**: User can send email with attachments (--attach flag, multiple allowed)
+- [x] **SEND-03**: User can send email with attachments (--attach flag, multiple allowed)
 - [x] **SEND-04**: User can reply to existing thread (References/In-Reply-To headers set, body empty)
 
 ### Organization
@@ -85,7 +85,7 @@
 | SCH-02 | Phase 3 | Complete |
 | SEND-01 | Phase 3 | Complete |
 | SEND-02 | Phase 3 | Complete |
-| SEND-03 | Phase 4 | Pending |
+| SEND-03 | Phase 4 | Complete |
 | SEND-04 | Phase 3 | Complete |
 | ORG-01 | Phase 4 | Complete |
 | ORG-02 | Phase 4 | Complete |
