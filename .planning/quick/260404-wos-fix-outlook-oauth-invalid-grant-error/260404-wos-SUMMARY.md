@@ -7,74 +7,84 @@ tags: [outlook, oauth, msal, bug-fix]
 dependency_graph:
   requires: []
   provides: []
-  affects: [src/auth/outlook-oauth.ts]
+  affects: [src/auth/outlook-oauth.ts, src/cli.ts]
 tech_stack:
-  added: []
-  patterns: [PCA singleton for MSAL cache persistence]
+  added: [MSAL cache persistence]
+  patterns: [PCA singleton, CachePlugin with disk persistence]
 key_files:
   created: []
   modified:
     - src/auth/outlook-oauth.ts
+    - src/cli.ts
 decisions: []
 metrics:
-  duration: ~1 minute
-  completed: "2026-04-04T16:38:42Z"
+  duration: ~10 minutes (iterative debugging)
+  completed: "2026-04-04T17:15:00Z"
 ---
 
 # Quick Task 260404-wos: Fix Outlook OAuth invalid_grant Error
 
-## Summary
+## Status: COMPLETED
 
-Fixed Outlook OAuth `invalid_grant` error by correcting token storage and making MSAL's PublicClientApplication a module-level singleton.
+Fixed through iterative debugging - initial PCA singleton fix was insufficient.
 
-## Bug Root Cause
+## Root Causes Found (Iterative)
 
-1. **Wrong token stored as refreshToken**: Line 43 stored `authResult.account.idTokenClaims?.oid` as refresh token. OID (Object ID) is a user identifier, NOT a refresh token.
-2. **PCA recreated each call**: `refreshOutlookToken` created a new `PublicClientApplication` on each invocation, resulting in an empty MSAL token cache every time.
-3. **Silent token acquisition failed**: `acquireTokenSilent` failed because MSAL's cache was empty (no refresh token available).
-4. **Fallback to device code failed**: Used the invalid OID as "refresh token" causing `invalid_grant` error from Microsoft identity platform.
+1. **PCA singleton alone doesn't work** - MSAL cache is in-memory, only persists within same process
+2. **MSAL cache not persisted to disk** - Needed CachePlugin with file-based cache
+3. **Wrong environment in account lookup** - Used `login.microsoftonline.com` but cache has `login.windows.net`
+4. **Keytar account suffix bug** - Passed `email:outlook` but appended another `:outlook`
+5. **cli.ts had duplicate MSAL code** - bypassed the outlook-oauth module entirely
 
-## Changes Made
+## Fixes Applied
 
-**1. Added PCA singleton (lines 7-18)**
+### Fix 1: MSAL Cache Persistence to Disk (~/.emailcli/outlook-msal-cache.json)
+
 ```typescript
-let pca: PublicClientApplication | null = null;
-
-function getPCA(): PublicClientApplication {
-  if (!pca) {
-    pca = new PublicClientApplication({...});
-  }
-  return pca;
+function createCachePlugin(): CachePlugin {
+  return {
+    beforeCacheAccess: async (cacheContext) => {
+      cacheContext.tokenCache.deserialize(await readCache());
+    },
+    afterCacheAccess: async (cacheContext) => {
+      if (cacheContext.hasChanged) {
+        await writeCache(cacheContext.tokenCache.serialize());
+      }
+    },
+  };
 }
 ```
 
-**2. Fixed getOutlookAuthToken (lines 38, 54)**
-- Uses `getPCA()` instead of creating new PCA
-- Stores `homeAccountId` as refreshToken instead of invalid OID
+### Fix 2: homeAccountId as MSAL Lookup Key
 
-**3. Fixed refreshOutlookToken (lines 86, 109, 134)**
-- Uses `getPCA()` instead of creating new PCA each time
-- Stores `homeAccountId` as refreshToken on successful refresh
+Changed from `idTokenClaims.oid` to `homeAccountId` - oid is NOT a refresh token.
 
-## Deviations from Plan
+### Fix 3: Correct MSAL Environment
 
-None - plan executed exactly as written.
+Changed from `login.microsoftonline.com` to `login.windows.net` (what MSAL actually stores).
+
+### Fix 4: Keytar Account Suffix
+
+```typescript
+const baseEmail = email.replace(/:outlook$/, "");
+const keytarAccount = `${baseEmail}:outlook`;
+```
+
+### Fix 5: cli.ts Uses outlook-oauth Module
+
+Refactored `account add --provider outlook` to use `getOutlookAuthToken()` from outlook-oauth.ts.
+
+## Commits
+
+- `b5c80b8` - fix(outlook-oauth): fix invalid_grant by using PCA singleton and proper token identifiers
+- `a5cd1bb` - fix(cli): use homeAccountId instead of oid as refreshToken in account add outlook
+- `d63c734` - fix(outlook): multiple OAuth fixes for persistent token refresh
 
 ## Verification
 
-Truths confirmed:
-- [x] Token refresh uses MSAL's cache, not the invalid OID
-- [x] PublicClientApplication is reused across calls, not recreated
+```bash
+$ bun ./src/cli.ts list --folder INBOX --limit 2
+{"emails":[{"id":"outlook:...","from":"account-security-noreply@accountprotection.microsoft.com",...}]}
+```
 
-Artifacts:
-- [x] `src/auth/outlook-oauth.ts` - 162 lines, contains PCA singleton
-
-## Commit
-
-- `b5c80b8` - fix(outlook-oauth): fix invalid_grant by using PCA singleton and proper token identifiers
-
-## Self-Check: PASSED
-
-- [x] File modified: `src/auth/outlook-oauth.ts` exists
-- [x] Commit exists: `b5c80b8`
-- [x] PCA singleton pattern verified: `let pca` and `getPCA()` present
+Outlook OAuth now works with persistent token refresh across CLI invocations.
