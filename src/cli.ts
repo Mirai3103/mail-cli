@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command, Option } from "commander";
+import { loadConfig } from "./utils/index.js";
 import {
 	getAccessToken,
 	listAccounts,
@@ -101,14 +102,11 @@ program
 			.action(async (options) => {
 				try {
 					if (options.provider === "gmail") {
-						// Check for required env vars
-						if (
-							!process.env.GMAIL_CLIENT_ID ||
-							!process.env.GMAIL_CLIENT_SECRET
-						) {
+						const config = await loadConfig();
+						if (!config.gmail.clientId || !config.gmail.clientSecret) {
 							throw new CLIError(
 								"MISSING_ENV",
-								"GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET must be set",
+								"Gmail credentials not configured. Set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET env vars, or configure ~/.emailcli/config.json",
 							);
 						}
 
@@ -123,14 +121,11 @@ program
 							JSON.stringify({ account: `${email}:gmail`, provider: "gmail" }),
 						);
 					} else if (options.provider === "outlook") {
-						// Check for required env vars
-						if (
-							!process.env.OUTLOOK_CLIENT_ID ||
-							!process.env.OUTLOOK_CLIENT_SECRET
-						) {
+						const config = await loadConfig();
+						if (!config.outlook.clientId || !config.outlook.clientSecret) {
 							throw new CLIError(
 								"MISSING_ENV",
-								"OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET must be set",
+								"Outlook credentials not configured. Set OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET env vars, or configure ~/.emailcli/config.json",
 							);
 						}
 
@@ -139,7 +134,7 @@ program
 						const pca = await import("@azure/msal-node").then(
 							(m) => new m.PublicClientApplication({
 								auth: {
-									clientId: process.env.OUTLOOK_CLIENT_ID,
+									clientId: config.outlook.clientId,
 								},
 							}),
 						);
