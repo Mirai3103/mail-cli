@@ -11,7 +11,7 @@
 | 1 | Foundation | 2/2 | Complete | AUTH-01, AUTH-02, AUTH-03 |
 | 2 | Gmail Provider | Gmail API integration via provider interface | NAV-01, NAV-02, NAV-03, ORG-04 | 4 |
 | 3 | Core Commands | 1/2 | In Progress|  |
-| 4 | Email Management | move, delete, mark read/unread + attachments | SEND-03, ORG-01, ORG-02, ORG-03 | 4 |
+| 4 | Email Management | 3/3 | Complete   | 2026-04-04 |
 | 5 | Multi-Provider | Outlook provider + multi-account support | AUTH-04 | 1 |
 | 6 | Polish | Batch operations, error output, startup optimization | — | — |
 
@@ -114,7 +114,7 @@
 ### Plans
 - [x] 04-01-PLAN.md — GmailProvider.mark(), move(), delete() implementations
 - [x] 04-02-PLAN.md — Attachment support (buildRawMessage, GmailProvider.send attachments, --attach flag)
-- [ ] 04-03-PLAN.md — CLI mark, move, delete commands
+- [x] 04-03-PLAN.md — CLI mark, move, delete commands
 
 ---
 
