@@ -7,9 +7,9 @@
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can authenticate via OAuth2 browser flow and store tokens securely in OS keychain
-- [ ] **AUTH-02**: User can list connected accounts
-- [ ] **AUTH-03**: User can remove a connected account
+- [x] **AUTH-01**: User can authenticate via OAuth2 browser flow and store tokens securely in OS keychain
+- [x] **AUTH-02**: User can list connected accounts
+- [x] **AUTH-03**: User can remove a connected account
 
 ### Mailbox Navigation
 
@@ -73,9 +73,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
 | NAV-01 | Phase 2 | Pending |
 | NAV-02 | Phase 2 | Pending |
 | NAV-03 | Phase 2 | Pending |
