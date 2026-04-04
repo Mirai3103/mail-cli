@@ -130,8 +130,7 @@ program
 							);
 						}
 
-						// Device code flow will prompt for email
-						// We need to get the email after auth
+						// Device code flow for Outlook
 						const pca = await import("@azure/msal-node").then(
 							(m) => new m.PublicClientApplication({
 								auth: {
@@ -166,8 +165,8 @@ program
 							const keytarAccount = `${email}:outlook`;
 							await saveTokens(keytarAccount, {
 								accessToken: result.accessToken,
-								refreshToken:
-									result.account.idTokenClaims?.oid || "",
+								// Use homeAccountId as MSAL lookup key - NOT oid (which is not a refresh token)
+								refreshToken: result.account.homeAccountId,
 								expiresAt: result.expiresOn?.getTime(),
 								tenantId: result.tenantId,
 								homeAccountId: result.account.homeAccountId,
