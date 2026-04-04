@@ -135,6 +135,10 @@
 - --account flag for provider selection
 - Account-scoped credential lookup via keytar
 
+### Plans
+- [ ] 05-01-PLAN.md — Outlook OAuth module + error codes (wave 1)
+- [ ] 05-02-PLAN.md — OutlookProvider + CLI --account flag (wave 2)
+
 ---
 
 ## Phase 6: Polish
