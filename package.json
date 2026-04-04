@@ -17,6 +17,8 @@
     "figlet": "^1.11.0",
     "googleapis": "^171.4.0",
     "keytar": "^7.9.0",
+    "mailparser": "^3.9.6",
+    "nodemailer": "^8.0.4",
     "ora": "^9.3.0",
     "picocolors": "^1.1.1"
   }
