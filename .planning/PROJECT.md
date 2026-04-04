@@ -14,14 +14,14 @@ A developer tool that lets you read, compose, search, and manage email from any 
 
 - [x] Account management: Add/remove/list email accounts via OAuth2 (Phase 1: AUTH-01, AUTH-02, AUTH-03)
 - [x] Mailbox navigation: List inbox, list emails in folders, mailbox status, folder listing (Phase 2: NAV-01, NAV-02, NAV-03, ORG-04)
+- [x] Read email: Display email content with headers, body, attachments (Phase 3: READ-01, READ-02)
+- [x] Search: Server-side search via Gmail native syntax (Phase 3: SCH-01, SCH-02)
+- [x] Compose: Send new emails via `--to`, `--subject`, `--body`, `--body-file-path` (Phase 3: SEND-01, SEND-02)
+- [x] Reply: Send reply with threading headers, empty body (Phase 3: SEND-04)
 
 ### Active
 
-- [ ] Mailbox navigation: List inbox, list recent emails, navigate folders/labels
-- [ ] Search: Server-side search via provider's native search (Gmail search syntax / Outlook filters)
-- [ ] Read email: Display email content in terminal (headers, body, attachments list)
-- [ ] Compose: Send new emails via inline flags (`--to`, `--subject`, `--body`, `--body-file-path`, `--attach`)
-- [ ] Reply: Send reply to existing thread (Headers-only: References/In-Reply-To set, body empty)
+- [ ] Organization: Mark read/unread, trash/delete, move to folder (Phase 4: SEND-03, ORG-01, ORG-02, ORG-03)
 - [ ] Organization: Mark read/unread, trash/delete, move to folder (provider-native folder names)
 - [ ] Structured output: All commands return parseable JSON arrays
 
@@ -62,4 +62,4 @@ A developer tool that lets you read, compose, search, and manage email from any 
 
 ---
 
-*Last updated: 2026-04-04 after Phase 2 completion*
+*Last updated: 2026-04-04 after Phase 3 completion*
