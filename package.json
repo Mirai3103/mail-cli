@@ -18,7 +18,8 @@
 		"@types/bun": "latest",
 		"@types/keytar": "^4.4.2",
 		"@types/node": "^25.5.2",
-		"@types/nodemailer": "^7.0.11"
+		"@types/nodemailer": "^7.0.11",
+		"tsup": "^8.5.1"
 	},
 	"peerDependencies": {
 		"typescript": "^6.0.2"
