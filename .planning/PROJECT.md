@@ -18,11 +18,10 @@ A developer tool that lets you read, compose, search, and manage email from any 
 - [x] Search: Server-side search via Gmail native syntax (Phase 3: SCH-01, SCH-02)
 - [x] Compose: Send new emails via `--to`, `--subject`, `--body`, `--body-file-path` (Phase 3: SEND-01, SEND-02)
 - [x] Reply: Send reply with threading headers, empty body (Phase 3: SEND-04)
+- [x] Organization: Mark read/unread, trash/delete, move to folder, attachments (Phase 4: ORG-01, ORG-02, ORG-03, SEND-03)
 
 ### Active
 
-- [ ] Organization: Mark read/unread, trash/delete, move to folder (Phase 4: SEND-03, ORG-01, ORG-02, ORG-03)
-- [ ] Organization: Mark read/unread, trash/delete, move to folder (provider-native folder names)
 - [ ] Structured output: All commands return parseable JSON arrays
 
 ### Out of Scope
@@ -55,11 +54,11 @@ A developer tool that lets you read, compose, search, and manage email from any 
 |----------|-----------|---------|
 | Unified command interface | Same commands regardless of provider — agents don't need provider logic | — Pending |
 | JSON array output | Compact, pipe-friendly, easy for agents to parse | — Pending |
-| Provider-native folder names | No abstraction layer — user controls Gmail vs Outlook semantics directly | — Pending |
+| Provider-native folder names | No abstraction layer — user controls Gmail vs Outlook semantics directly | ✓ Validated (Phase 4) |
 | Server-side search only | Simpler V1, leverages provider search quality | — Pending |
 | OAuth2 only | Secure, supports both Gmail and Outlook properly | ✓ Validated (Phase 1) |
 | Online-only | Avoids sync complexity for V1 | — Pending |
 
 ---
 
-*Last updated: 2026-04-04 after Phase 3 completion*
+*Last updated: 2026-04-04 after Phase 4 completion*
