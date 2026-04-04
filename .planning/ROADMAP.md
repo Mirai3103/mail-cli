@@ -166,6 +166,7 @@
 - [x] 06-02-PLAN.md — Batch operations (--ids flag) for mark/move/delete (wave 2)
 - [x] 06-03-PLAN.md — Startup optimization (remove isomorphic-fetch) + README (wave 3)
 - [x] 06-04-PLAN.md — Gap closure: integrate loadConfig into cli.ts, remove isomorphic-fetch from outlook modules (wave 1)
+- [x] 06-05-PLAN.md — Gap closure: fix OutlookProvider EmailProvider import, lazy-load providers for startup (wave 1)
 
 ---
 
