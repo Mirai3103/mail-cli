@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-last_updated: "2026-04-04T12:08:11.486Z"
+status: Phase complete — ready for verification
+last_updated: "2026-04-04T12:10:58.455Z"
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # mail-cli State
@@ -44,6 +44,7 @@ Plan: 2 of 2
 | Phase 02-gmail-provider P01 | 2 | 2 tasks | 1 files |
 | Phase 02-gmail-provider P02 | 10 | 2 tasks | 2 files |
 | Phase 03-core-commands P01 | 133 | 5 tasks | 6 files |
+| Phase 03 P02 | 5 | 4 tasks | 3 files |
 
 ## Phase Status
 
@@ -51,7 +52,7 @@ Plan: 2 of 2
 |-------|------|--------------|--------|
 | 1 | Foundation | AUTH-01, AUTH-02, AUTH-03 (3) | Complete |
 | 2 | Gmail Provider | NAV-01, NAV-02, NAV-03, ORG-04 (4) | Complete |
-| 3 | Core Commands | READ-01, READ-02, SCH-01, SCH-02, SEND-01, SEND-02, SEND-04 (7) | Context gathered |
+| 3 | Core Commands | READ-01, READ-02, SCH-01, SCH-02, SEND-01, SEND-02, SEND-04 (7) | Complete |
 | 4 | Email Management | SEND-03, ORG-01, ORG-02, ORG-03 (4) | Not started |
 | 5 | Multi-Provider | AUTH-04 (v2) | Not started |
 | 6 | Polish | v2 items | Not started |
@@ -68,6 +69,9 @@ Plan: 2 of 2
 - Provider-native folder names (no abstraction)
 - Server-side search only (no local index)
 - Provider adapter pattern: GmailProvider, OutlookProvider behind EmailProvider interface
+- GmailProvider uses parseGmailRaw for full email parsing with mailparser
+- readThread() fetches each message individually since threads.get doesn't support RAW format
+- send()/reply() use nodemailer MailComposer with base64url encoding for Gmail API
 
 ### Phase Dependencies
 
@@ -92,6 +96,7 @@ None identified yet.
 |---------|------|-----------|
 | 1 | 2026-04-04 | Roadmap created |
 | 2 | 2026-04-04 | Phase 1, 2 context + Phase 3 context |
+| 3 | 2026-04-04 | Phase 03 plan 02 execution complete |
 
 ---
 

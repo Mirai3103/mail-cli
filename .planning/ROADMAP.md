@@ -89,7 +89,7 @@
 
 ### Plans
 - [x] 03-01-PLAN.md — Email parsing and composition utilities (mailparser, nodemailer)
-- [ ] 03-02-PLAN.md — GmailProvider read/search/send/reply + CLI commands
+- [x] 03-02-PLAN.md — GmailProvider read/search/send/reply + CLI commands
 
 ---
 
