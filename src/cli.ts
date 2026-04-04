@@ -123,63 +123,29 @@ program
 						);
 					} else if (options.provider === "outlook") {
 						const config = await loadConfig();
-						if (!config.outlook.clientId || !config.outlook.clientSecret) {
+						if (!config.outlook.clientId) {
 							throw new CLIError(
 								"MISSING_ENV",
-								"Outlook credentials not configured. Set OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET env vars, or configure ~/.emailcli/config.json",
+								"Outlook Client ID not configured. Set OUTLOOK_CLIENT_ID env var, or configure ~/.emailcli/config.json",
 							);
 						}
 
-						// Device code flow for Outlook
-						const pca = await import("@azure/msal-node").then(
-							(m) => new m.PublicClientApplication({
-								auth: {
-									clientId: config.outlook.clientId,
-								},
+						// Use outlook-oauth module with persistent MSAL cache
+						await getOutlookAuthToken("");
+
+						// Get the account that was just authenticated
+						const accounts = await listAccounts();
+						const outlookAccount = accounts.find((a) => a.endsWith(":outlook"));
+						if (!outlookAccount) {
+							throw new CLIError("OUTLOOK_AUTH_ERROR", "Failed to get Outlook account after authentication");
+						}
+
+						console.log(
+							JSON.stringify({
+								account: outlookAccount,
+								provider: "outlook",
 							}),
 						);
-
-						const result = await pca.acquireTokenByDeviceCode({
-							deviceCodeCallback: (response: { message: string }) => {
-								console.log(response.message);
-							},
-							scopes: [
-								"Mail.Read",
-								"Mail.Send",
-								"Mail.ReadBasic",
-								"User.Read",
-								"offline_access",
-							],
-						});
-
-						if (result && result.account) {
-							const email =
-								result.account.username ||
-								(await fetch("https://graph.microsoft.com/v1.0/me", {
-									headers: {
-										Authorization: `Bearer ${result.accessToken}`,
-									},
-								}).then((r) => r.json()).then((d) => d.mail || d.userPrincipalName));
-
-							// Save tokens with provider suffix
-							const keytarAccount = `${email}:outlook`;
-							await saveTokens(keytarAccount, {
-								accessToken: result.accessToken,
-								// Use homeAccountId as MSAL lookup key - NOT oid (which is not a refresh token)
-								refreshToken: result.account.homeAccountId,
-								expiresAt: result.expiresOn?.getTime(),
-								tenantId: result.tenantId,
-								homeAccountId: result.account.homeAccountId,
-								localAccountId: result.account.localAccountId,
-							});
-
-							console.log(
-								JSON.stringify({
-									account: keytarAccount,
-									provider: "outlook",
-								}),
-							);
-						}
 					} else {
 						throw new CLIError(
 							"UNSUPPORTED_PROVIDER",

@@ -1,9 +1,61 @@
-import { PublicClientApplication } from "@azure/msal-node";
+import { PublicClientApplication, type CachePlugin } from "@azure/msal-node";
 import { saveTokens, getTokens } from "./oauth.js";
+import { mkdir } from "bun:fs";
+import { join } from "path";
 
 const OUTLOOK_CLIENT_ID = process.env.OUTLOOK_CLIENT_ID;
+const CACHE_DIR = join(process.env.HOME || "", ".emailcli");
+const CACHE_FILE = join(CACHE_DIR, "outlook-msal-cache.json");
 
-// Module-level PCA singleton so MSAL's token cache persists across calls
+// Ensure cache directory exists
+async function ensureCacheDir(): Promise<void> {
+	try {
+		await mkdir(CACHE_DIR, { recursive: true });
+	} catch {}
+}
+
+/**
+ * Read the persisted MSAL cache from disk using Bun.file().
+ */
+async function readCache(): Promise<string> {
+	try {
+		await ensureCacheDir();
+		const file = Bun.file(CACHE_FILE);
+		if (await file.exists()) {
+			return await file.text();
+		}
+		return "{}";
+	} catch {
+		return "{}";
+	}
+}
+
+/**
+ * Write the MSAL cache to disk using Bun.write().
+ */
+async function writeCache(cache: string): Promise<void> {
+	await ensureCacheDir();
+	await Bun.write(CACHE_FILE, cache);
+}
+
+/**
+ * Create a cache plugin for MSAL to persist tokens to disk.
+ * This enables silent token refresh across CLI invocations.
+ */
+function createCachePlugin(): CachePlugin {
+	return {
+		beforeCacheAccess: async (cacheContext) => {
+			cacheContext.tokenCache.deserialize(await readCache());
+		},
+		afterCacheAccess: async (cacheContext) => {
+			if (cacheContext.hasChanged) {
+				await writeCache(cacheContext.tokenCache.serialize());
+			}
+		},
+	};
+}
+
+// Module-level PCA singleton with persistent cache
 let pca: PublicClientApplication | null = null;
 
 function getPCA(): PublicClientApplication {
@@ -11,6 +63,9 @@ function getPCA(): PublicClientApplication {
 		pca = new PublicClientApplication({
 			auth: {
 				clientId: OUTLOOK_CLIENT_ID || "",
+			},
+			cache: {
+				cachePlugin: createCachePlugin(),
 			},
 		});
 	}
@@ -28,7 +83,7 @@ export const OUTLOOK_SCOPES = [
 /**
  * Get Outlook access token through MSAL device code flow.
  * Opens browser for user authorization, exchanges device code for tokens.
- * Saves tokens to keytar with account name format "email:outlook".
+ * Tokens are cached to disk via MSAL's cache plugin for silent refresh.
  */
 export async function getOutlookAuthToken(email: string): Promise<void> {
 	if (!OUTLOOK_CLIENT_ID) {
@@ -45,12 +100,12 @@ export async function getOutlookAuthToken(email: string): Promise<void> {
 	});
 
 	if (authResult && authResult.account) {
+		// MSAL caches tokens internally via the cache plugin
+		// Also store account identifiers to keytar for account lookup
 		const accountEmail = authResult.account.username || email;
-		// Store with provider suffix per D-07: email:outlook format
 		const keytarAccount = `${accountEmail}:outlook`;
 		await saveTokens(keytarAccount, {
 			accessToken: authResult.accessToken,
-			// Store homeAccountId as MSAL lookup key - MSAL handles refresh internally via its cache
 			refreshToken: authResult.account.homeAccountId,
 			expiresAt: authResult.expiresOn?.getTime(),
 			tenantId: authResult.tenantId,
@@ -62,11 +117,12 @@ export async function getOutlookAuthToken(email: string): Promise<void> {
 
 /**
  * Refresh an Outlook access token for a given account.
- * Since we store tokens externally (keytar), MSAL's silent token cache is not used.
- * This function attempts to refresh, but falls back to device code flow if needed.
+ * Uses MSAL's persistent cache for silent token refresh.
  */
 export async function refreshOutlookToken(email: string): Promise<string> {
-	const keytarAccount = `${email}:outlook`;
+	// Strip :outlook suffix if present to get the base email
+	const baseEmail = email.replace(/:outlook$/, "");
+	const keytarAccount = `${baseEmail}:outlook`;
 	const tokens = await getTokens(keytarAccount);
 
 	if (!tokens) {
@@ -82,17 +138,16 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 		localAccountId?: string;
 	};
 
-	// Reuse PCA singleton so MSAL's token cache persists across calls
 	const pcaInstance = getPCA();
 
-	// MSAL requires account object for silent token acquisition
-	// If we have proper account info stored, try silent flow first
+	// MSAL's cache is persisted to disk - if we successfully authenticated before,
+	// the refresh token should be in the cache and silent refresh will work
 	if (tokenObj.homeAccountId && tokenObj.localAccountId) {
 		try {
 			const account = {
 				homeAccountId: tokenObj.homeAccountId,
 				localAccountId: tokenObj.localAccountId,
-				environment: "login.microsoftonline.com",
+				environment: "login.windows.net",
 				tenantId: tokenObj.tenantId || "common",
 				username: email,
 			};
@@ -103,7 +158,7 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 			});
 
 			if (refreshResult && refreshResult.accessToken) {
-				// Save refreshed tokens
+				// Update keytar with fresh tokens (MSAL cache is updated automatically)
 				await saveTokens(keytarAccount, {
 					accessToken: refreshResult.accessToken,
 					refreshToken: refreshResult.account?.homeAccountId || tokenObj.refreshToken,
