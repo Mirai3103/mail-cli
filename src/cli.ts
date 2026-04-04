@@ -7,6 +7,7 @@ import {
   saveTokens,
 } from "./auth/index.js";
 import { GmailProvider } from "./providers/gmail-provider.js";
+import { Email } from "./providers/email-provider.js";
 import { CLIError, printError } from "./utils/errors.js";
 
 const program = new Command();
@@ -122,7 +123,7 @@ program
       }
 
       const account = accounts[0]; // Use first account for now
-      const provider = new GmailProvider(account);
+      const provider = new GmailProvider(account!);
 
       const limit = parseInt(options.limit, 10);
       if (isNaN(limit) || limit < 1) {
@@ -182,6 +183,165 @@ program
 
       // Output per D-06, D-07, D-08: flat list with {id, name, type}
       console.log(JSON.stringify(folders));
+    } catch (err) {
+      printError(err as Error);
+      process.exit(1);
+    }
+  });
+
+// Read command - READ-01, READ-02
+program
+  .command("read")
+  .description("Read a single email or thread")
+  .argument("<id>", "Email ID or thread ID")
+  .option("--thread", "Read all messages in thread (use thread ID as argument)")
+  .action(async (id, options) => {
+    try {
+      const accounts = await listAccounts();
+      if (accounts.length === 0) {
+        throw new CLIError("NO_ACCOUNTS", "No accounts configured. Run 'mail-cli account add --provider gmail' first.");
+      }
+
+      const account = accounts[0];
+      const provider = new GmailProvider(account);
+
+      let result: Email | Email[];
+      if (options.thread) {
+        // D-05: read --thread returns all messages in thread as JSON array
+        result = await provider.readThread(id);
+      } else {
+        // D-03: read <id> returns full Email object
+        result = await provider.read(id);
+      }
+
+      console.log(JSON.stringify(result));
+    } catch (err) {
+      printError(err as Error);
+      process.exit(1);
+    }
+  });
+
+// Search command - SCH-01, SCH-02
+program
+  .command("search")
+  .description("Search emails using Gmail search syntax")
+  .argument("<query>", "Gmail search query (e.g., 'from:foo subject:bar is:unread')")
+  .option("--limit <number>", "Maximum results to return (default: 20, max: 100)", "20")
+  .action(async (query, options) => {
+    try {
+      const accounts = await listAccounts();
+      if (accounts.length === 0) {
+        throw new CLIError("NO_ACCOUNTS", "No accounts configured. Run 'mail-cli account add --provider gmail' first.");
+      }
+
+      const account = accounts[0];
+      const provider = new GmailProvider(account);
+
+      const limit = parseInt(options.limit, 10);
+      if (isNaN(limit) || limit < 1) {
+        throw new CLIError("INVALID_LIMIT", "--limit must be a positive number");
+      }
+
+      // D-07: Pass search query directly to Gmail (D-08: returns same fields as list)
+      const result = await provider.search(query, limit);
+
+      console.log(JSON.stringify(result));
+    } catch (err) {
+      printError(err as Error);
+      process.exit(1);
+    }
+  });
+
+// Send command - SEND-01, SEND-02
+program
+  .command("send")
+  .description("Send a new email")
+  .requiredOption("--to <addresses>", "Recipient email addresses (comma-separated)")
+  .requiredOption("--subject <subject>", "Email subject")
+  .option("--body <text>", "Email body text")
+  .option("--body-file-path <path>", "Path to file containing email body")
+  .option("--cc <addresses>", "CC recipients (comma-separated)")
+  .option("--bcc <addresses>", "BCC recipients (comma-separated)")
+  .action(async (options) => {
+    try {
+      const accounts = await listAccounts();
+      if (accounts.length === 0) {
+        throw new CLIError("NO_ACCOUNTS", "No accounts configured. Run 'mail-cli account add --provider gmail' first.");
+      }
+
+      const account = accounts[0];
+      const provider = new GmailProvider(account);
+
+      // D-10: body is required for send (either --body or --body-file-path)
+      let body = options.body || "";
+      if (options.bodyFilePath) {
+        // D-11: Read body from file using Bun.file()
+        const file = Bun.file(options.bodyFilePath);
+        if (!await file.exists()) {
+          throw new CLIError("FILE_NOT_FOUND", `Body file not found: ${options.bodyFilePath}`);
+        }
+        body = await file.text();
+      }
+
+      if (!body && !options.bodyFilePath) {
+        throw new CLIError("MISSING_BODY", "Either --body or --body-file-path is required");
+      }
+
+      // Parse comma-separated addresses
+      const to = options.to.split(",").map((s: string) => s.trim());
+      const cc = options.cc ? options.cc.split(",").map((s: string) => s.trim()) : undefined;
+      const bcc = options.bcc ? options.bcc.split(",").map((s: string) => s.trim()) : undefined;
+
+      const result = await provider.send({
+        to,
+        cc,
+        bcc,
+        subject: options.subject,
+        body,
+      });
+
+      // Return the sent message ID
+      console.log(JSON.stringify({ id: result }));
+    } catch (err) {
+      printError(err as Error);
+      process.exit(1);
+    }
+  });
+
+// Reply command - SEND-04
+program
+  .command("reply")
+  .description("Reply to an existing email (with empty body)")
+  .argument("<id>", "ID of message to reply to")
+  .requiredOption("--to <addresses>", "Reply recipients (comma-separated)")
+  .option("--cc <addresses>", "CC recipients (comma-separated)")
+  .option("--bcc <addresses>", "BCC recipients (comma-separated)")
+  .action(async (id, options) => {
+    try {
+      const accounts = await listAccounts();
+      if (accounts.length === 0) {
+        throw new CLIError("NO_ACCOUNTS", "No accounts configured. Run 'mail-cli account add --provider gmail' first.");
+      }
+
+      const account = accounts[0];
+      const provider = new GmailProvider(account);
+
+      // Parse comma-separated addresses
+      const to = options.to.split(",").map((s: string) => s.trim());
+      const cc = options.cc ? options.cc.split(",").map((s: string) => s.trim()) : undefined;
+      const bcc = options.bcc ? options.bcc.split(",").map((s: string) => s.trim()) : undefined;
+
+      // D-15: Body is always empty for reply
+      const result = await provider.reply(id, {
+        to,
+        cc,
+        bcc,
+        subject: "", // Subject is extracted from original message in provider
+        body: "",    // D-15: empty body per SEND-04 spec
+      });
+
+      // Return the sent message ID
+      console.log(JSON.stringify({ id: result }));
     } catch (err) {
       printError(err as Error);
       process.exit(1);
