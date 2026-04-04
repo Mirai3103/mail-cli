@@ -6,7 +6,7 @@
 		"emailcli": "./dist/cli.js"
 	},
 	"homepage": "https://github.com/Mirai3103/mail-cli",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"scripts": {
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
