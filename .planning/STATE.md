@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-last_updated: "2026-04-04T13:13:35.665Z"
+status: Ready to execute
+last_updated: "2026-04-04T14:26:46.961Z"
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
 ---
 
 # mail-cli State
@@ -17,12 +17,12 @@ progress:
 
 **Core Value:** A developer tool that lets you read, compose, search, and manage email from any terminal without leaving your workflow. Zero friction — every action is a single command with flags.
 
-**Current Focus:** Phase 05 — Multi-Provider
+**Current Focus:** Phase 05 — multi-provider
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (multi-provider) — EXECUTING
+Plan: 1 of 2 (Plan 02 ready to execute)
 | Field | Value |
 |-------|-------|
 | Current Phase | 1 - Foundation |
@@ -48,6 +48,7 @@ Plan: Not started
 | Phase 04-email-management P01 | 80 | 3 tasks | 1 files |
 | Phase 04 P02 | 177 | 3 tasks | 2 files |
 | Phase 04-email-management P03 | 3 | 3 tasks | 1 files |
+| Phase 05 P01 | 6 | 3 tasks | 4 files |
 
 ## Phase Status
 
@@ -57,7 +58,7 @@ Plan: Not started
 | 2 | Gmail Provider | NAV-01, NAV-02, NAV-03, ORG-04 (4) | Complete |
 | 3 | Core Commands | READ-01, READ-02, SCH-01, SCH-02, SEND-01, SEND-02, SEND-04 (7) | Complete |
 | 4 | Email Management | SEND-03, ORG-01, ORG-02, ORG-03 (4) | Complete |
-| 5 | Multi-Provider | AUTH-04 (v2) | Context gathered |
+| 5 | Multi-Provider | AUTH-04 (v2) | 1/2 plans complete |
 | 6 | Polish | v2 items | Not started |
 
 ## Accumulated Context
@@ -75,6 +76,9 @@ Plan: Not started
 - GmailProvider uses parseGmailRaw for full email parsing with mailparser
 - readThread() fetches each message individually since threads.get doesn't support RAW format
 - send()/reply() use nodemailer MailComposer with base64url encoding for Gmail API
+- MSAL device code flow for Outlook OAuth2 (CLI-friendly, no redirect needed)
+- Token storage uses email:outlook keytar account format per D-07
+- OUTLOOK_SCOPES = Mail.Read, Mail.Send, Mail.ReadBasic, User.Read, offline_access
 
 ### Phase Dependencies
 
@@ -101,6 +105,7 @@ None identified yet.
 | 2 | 2026-04-04 | Phase 1, 2 context + Phase 3 context |
 | 3 | 2026-04-04 | Phase 03 plan 02 execution complete |
 | 4 | 2026-04-04 | Phase 5 context gathered (Multi-Provider) |
+| 5 | 2026-04-04 | Phase 5 plan 01 executed (Outlook OAuth foundation) |
 
 ---
 
