@@ -12,11 +12,11 @@ A developer tool that lets you read, compose, search, and manage email from any 
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Account management: Add/remove/list email accounts via OAuth2 (Phase 1: AUTH-01, AUTH-02, AUTH-03)
 
 ### Active
 
-- [ ] Account management: Add/remove/list email accounts via OAuth2
+- [ ] Mailbox navigation: List inbox, list recent emails, navigate folders/labels
 - [ ] Mailbox navigation: List inbox, list recent emails, navigate folders/labels
 - [ ] Search: Server-side search via provider's native search (Gmail search syntax / Outlook filters)
 - [ ] Read email: Display email content in terminal (headers, body, attachments list)
@@ -57,9 +57,9 @@ A developer tool that lets you read, compose, search, and manage email from any 
 | JSON array output | Compact, pipe-friendly, easy for agents to parse | — Pending |
 | Provider-native folder names | No abstraction layer — user controls Gmail vs Outlook semantics directly | — Pending |
 | Server-side search only | Simpler V1, leverages provider search quality | — Pending |
-| OAuth2 only | Secure, supports both Gmail and Outlook properly | — Pending |
+| OAuth2 only | Secure, supports both Gmail and Outlook properly | ✓ Validated (Phase 1) |
 | Online-only | Avoids sync complexity for V1 | — Pending |
 
 ---
 
-*Last updated: 2026-04-04 after initialization*
+*Last updated: 2026-04-04 after Phase 1 completion*
