@@ -35,6 +35,10 @@
 - OAuth2 flow with keytar integration
 - GmailProvider stub (interface-compliant, no-op until Phase 2)
 
+### Plans
+- [ ] 01-01-PLAN.md — Foundation (interface, stubs, utilities)
+- [ ] 01-02-PLAN.md — OAuth2 + account commands
+
 ---
 
 ## Phase 2: Gmail Provider
