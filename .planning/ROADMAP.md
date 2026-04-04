@@ -13,7 +13,7 @@
 | 3 | Core Commands | 1/2 | In Progress|  |
 | 4 | Email Management | 3/3 | Complete   | 2026-04-04 |
 | 5 | Multi-Provider | 2/2 | Complete   | 2026-04-04 |
-| 6 | Polish | Batch operations, error output, startup optimization | — | — |
+| 6 | Polish | Batch operations, error output, startup optimization | ORG-05 | — |
 
 ---
 
@@ -146,7 +146,7 @@
 **Goal:** Edge cases, batch operations, structured errors.
 
 ### Requirements
-(None new — addresses v2 deferred items)
+- ORG-05 (batch operations)
 
 ### Success Criteria
 1. `mail-cli move --ids 1,2,3 --folder "X"` batch moves emails
@@ -158,7 +158,13 @@
 - Batch operations (--ids flag)
 - Structured error output
 - Startup performance optimization
-- man page / --help completion
+- Config file with auto-create and env override
+- README for npx distribution
+
+### Plans
+- [ ] 06-01-PLAN.md — Config file with auto-create and env override (wave 1)
+- [ ] 06-02-PLAN.md — Batch operations (--ids flag) for mark/move/delete (wave 2)
+- [ ] 06-03-PLAN.md — Startup optimization (remove isomorphic-fetch) + README (wave 3)
 
 ---
 
@@ -196,9 +202,11 @@
 | ORG-01 | Phase 4 |
 | ORG-02 | Phase 4 |
 | ORG-03 | Phase 4 |
+| ORG-05 | Phase 6 |
 
-**Coverage:** 18/18 requirements mapped ✓
+**Coverage:** 19/19 requirements mapped ✓
 
 ---
 
 *Roadmap created: 2026-04-04*
+*Last updated: 2026-04-04*
