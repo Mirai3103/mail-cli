@@ -34,3 +34,8 @@ export function printError(error: unknown): void {
 		);
 	}
 }
+
+// Outlook-specific error codes
+// throw new CLIError("OUTLOOK_AUTH_ERROR", "Failed to authenticate with Outlook", err);
+// throw new CLIError("OUTLOOK_API_ERROR", "Failed to call Outlook API: {detail}", err);
+// throw new CLIError("OUTLOOK_TOKEN_REFRESH_ERROR", "Failed to refresh Outlook access token", err);
