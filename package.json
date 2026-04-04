@@ -3,14 +3,14 @@
 	"module": "index.ts",
 	"type": "module",
 	"bin": {
-		"emailcli": "./dist/cli.js"
+		"emailcli": "./dist/cli.cjs"
 	},
 	"homepage": "https://github.com/Mirai3103/mail-cli",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"scripts": {
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
-		"build": "bun build ./src/cli.ts --outdir ./dist --target node --format esm",
+		"build": "npx tsup ",
 		"prepublishOnly": "bun run build"
 	},
 	"devDependencies": {
