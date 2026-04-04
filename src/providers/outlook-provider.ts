@@ -1,4 +1,3 @@
-import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { refreshOutlookToken } from "../auth/outlook-oauth.js";
 import { CLIError } from "../utils/errors.js";
