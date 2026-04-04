@@ -6,7 +6,6 @@ import type { OAuth2Client } from "google-auth-library";
 const SERVICE = "mail-cli";
 
 const SCOPES = [
-  "https://www.googleapis.com/auth/gmail.readwrite",
   "https://www.googleapis.com/auth/gmail.modify",
 ];
 
