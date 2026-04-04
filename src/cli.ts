@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { Command } from "commander";
+import "isomorphic-fetch";
+import { Command, Option } from "commander";
 import {
 	getAccessToken,
 	listAccounts,
@@ -7,6 +8,8 @@ import {
 	saveTokens,
 } from "./auth/index.js";
 import { GmailProvider } from "./providers/gmail-provider.js";
+import { OutlookProvider } from "./providers/outlook-provider.js";
+import { getOutlookAuthToken } from "./auth/outlook-oauth.js";
 import type { Email } from "./providers/email-provider.js";
 import { CLIError, printError } from "./utils/errors.js";
 
@@ -28,6 +31,63 @@ process.on("unhandledRejection", (err) => {
 	process.exit(1);
 });
 
+/**
+ * Resolve the provider based on account flag.
+ * Per D-08, D-09, D-10: single account auto-select, multiple accounts require --account.
+ */
+async function resolveProvider(
+	accountFlag?: string,
+): Promise<GmailProvider | OutlookProvider> {
+	const accounts = await listAccounts();
+
+	let account: string;
+	if (!accountFlag) {
+		if (accounts.length === 0) {
+			throw new CLIError(
+				"NO_ACCOUNTS",
+				"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
+			);
+		}
+		if (accounts.length === 1) {
+			account = accounts[0];
+		} else {
+			throw new CLIError(
+				"MULTIPLE_ACCOUNTS",
+				`Multiple accounts found. Use --account to specify one of: ${accounts.join(", ")}`,
+			);
+		}
+	} else {
+		if (!accounts.includes(accountFlag)) {
+			throw new CLIError(
+				"ACCOUNT_NOT_FOUND",
+				`Account ${accountFlag} not found. Available: ${accounts.join(", ")}`,
+			);
+		}
+		account = accountFlag;
+	}
+
+	// Parse provider from account suffix (D-07: email:provider format)
+	// Gmail: "me@gmail.com:gmail" -> provider=gmail
+	// Outlook: "me@outlook.com:outlook" -> provider=outlook
+	if (account.endsWith(":gmail")) {
+		return new GmailProvider(account);
+	} else if (account.endsWith(":outlook")) {
+		return new OutlookProvider(account);
+	} else {
+		// Backwards compat: assume Gmail for accounts without suffix
+		return new GmailProvider(account);
+	}
+}
+
+/**
+ * Determine provider from account suffix.
+ */
+function getProviderFromAccount(account: string): string {
+	if (account.endsWith(":gmail")) return "gmail";
+	if (account.endsWith(":outlook")) return "outlook";
+	return "gmail"; // backwards compat
+}
+
 // Account commands
 program
 	.command("account")
@@ -41,34 +101,97 @@ program
 			)
 			.action(async (options) => {
 				try {
-					if (options.provider !== "gmail") {
+					if (options.provider === "gmail") {
+						// Check for required env vars
+						if (
+							!process.env.GMAIL_CLIENT_ID ||
+							!process.env.GMAIL_CLIENT_SECRET
+						) {
+							throw new CLIError(
+								"MISSING_ENV",
+								"GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET must be set",
+							);
+						}
+
+						// Initiate OAuth flow
+						const { tokens, email } = await getAccessToken();
+
+						// Save tokens to keychain
+						await saveTokens(email, tokens);
+
+						// Output result as JSON
+						console.log(
+							JSON.stringify({ account: `${email}:gmail`, provider: "gmail" }),
+						);
+					} else if (options.provider === "outlook") {
+						// Check for required env vars
+						if (
+							!process.env.OUTLOOK_CLIENT_ID ||
+							!process.env.OUTLOOK_CLIENT_SECRET
+						) {
+							throw new CLIError(
+								"MISSING_ENV",
+								"OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET must be set",
+							);
+						}
+
+						// Device code flow will prompt for email
+						// We need to get the email after auth
+						const pca = await import("@azure/msal-node").then(
+							(m) => new m.PublicClientApplication({
+								auth: {
+									clientId: process.env.OUTLOOK_CLIENT_ID,
+								},
+							}),
+						);
+
+						const result = await pca.acquireTokenByDeviceCode({
+							deviceCodeCallback: (response: { message: string }) => {
+								console.log(response.message);
+							},
+							scopes: [
+								"Mail.Read",
+								"Mail.Send",
+								"Mail.ReadBasic",
+								"User.Read",
+								"offline_access",
+							],
+						});
+
+						if (result && result.account) {
+							const email =
+								result.account.username ||
+								(await fetch("https://graph.microsoft.com/v1.0/me", {
+									headers: {
+										Authorization: `Bearer ${result.accessToken}`,
+									},
+								}).then((r) => r.json()).then((d) => d.mail || d.userPrincipalName));
+
+							// Save tokens with provider suffix
+							const keytarAccount = `${email}:outlook`;
+							await saveTokens(keytarAccount, {
+								accessToken: result.accessToken,
+								refreshToken:
+									result.account.idTokenClaims?.oid || "",
+								expiresAt: result.expiresOn?.getTime(),
+								tenantId: result.tenantId,
+								homeAccountId: result.account.homeAccountId,
+								localAccountId: result.account.localAccountId,
+							});
+
+							console.log(
+								JSON.stringify({
+									account: keytarAccount,
+									provider: "outlook",
+								}),
+							);
+						}
+					} else {
 						throw new CLIError(
 							"UNSUPPORTED_PROVIDER",
-							`Provider '${options.provider}' is not supported. Currently only 'gmail' is supported.`,
+							`Provider '${options.provider}' is not supported. Use 'gmail' or 'outlook'.`,
 						);
 					}
-
-					// Check for required env vars
-					if (
-						!process.env.GMAIL_CLIENT_ID ||
-						!process.env.GMAIL_CLIENT_SECRET
-					) {
-						throw new CLIError(
-							"MISSING_ENV",
-							"GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET must be set",
-						);
-					}
-
-					// Initiate OAuth flow
-					const { tokens, email } = await getAccessToken();
-
-					// Save tokens to keychain
-					await saveTokens(email, tokens);
-
-					// Output result as JSON
-					console.log(
-						JSON.stringify({ account: email, provider: options.provider }),
-					);
 				} catch (err) {
 					printError(err as Error);
 					process.exit(1);
@@ -83,7 +206,7 @@ program
 					const accounts = await listAccounts();
 					const result = accounts.map((account) => ({
 						account,
-						provider: "gmail", // All accounts currently use Gmail
+						provider: getProviderFromAccount(account),
 					}));
 					console.log(JSON.stringify(result));
 				} catch (err) {
@@ -95,7 +218,7 @@ program
 	.addCommand(
 		new Command("remove")
 			.description("Remove an email account")
-			.requiredOption("--account <id>", "Account ID (email address)")
+			.requiredOption("--account <id>", "Account ID (email:provider format)")
 			.action(async (options) => {
 				try {
 					const accounts = await listAccounts();
@@ -119,7 +242,11 @@ program
 program
 	.command("list")
 	.description("List emails in a folder")
-	.option("--folder <name>", "Folder/label to list (default: INBOX)", "INBOX")
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
+	.option("--folder <name>", "Folder/label to list (default: Inbox/INBOX)", "Inbox")
 	.option(
 		"--limit <number>",
 		"Maximum number of emails to return (default: 20, max: 100)",
@@ -127,16 +254,7 @@ program
 	)
 	.action(async (options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError(
-					"NO_ACCOUNTS",
-					"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
-				);
-			}
-
-			const account = accounts[0]; // Use first account for now
-			const provider = new GmailProvider(account!);
+			const provider = await resolveProvider(options.account);
 
 			const limit = parseInt(options.limit, 10);
 			if (isNaN(limit) || limit < 1) {
@@ -161,18 +279,13 @@ program
 program
 	.command("status")
 	.description("Get mailbox status (unread and total message counts)")
-	.action(async () => {
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
+	.action(async (options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError(
-					"NO_ACCOUNTS",
-					"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
-				);
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account);
+			const provider = await resolveProvider(options.account);
 
 			const status = await provider.status();
 
@@ -188,18 +301,13 @@ program
 program
 	.command("folders")
 	.description("List all available folders/labels")
-	.action(async () => {
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
+	.action(async (options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError(
-					"NO_ACCOUNTS",
-					"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
-				);
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account);
+			const provider = await resolveProvider(options.account);
 
 			const folders = await provider.listFolders();
 
@@ -216,19 +324,14 @@ program
 	.command("read")
 	.description("Read a single email or thread")
 	.argument("<id>", "Email ID or thread ID")
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
 	.option("--thread", "Read all messages in thread (use thread ID as argument)")
 	.action(async (id, options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError(
-					"NO_ACCOUNTS",
-					"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
-				);
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account);
+			const provider = await resolveProvider(options.account);
 
 			let result: Email | Email[];
 			if (options.thread) {
@@ -249,10 +352,14 @@ program
 // Search command - SCH-01, SCH-02
 program
 	.command("search")
-	.description("Search emails using Gmail search syntax")
+	.description("Search emails using provider search syntax")
 	.argument(
 		"<query>",
-		"Gmail search query (e.g., 'from:foo subject:bar is:unread')",
+		"Search query (Gmail syntax for Gmail, KQL for Outlook)",
+	)
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
 	)
 	.option(
 		"--limit <number>",
@@ -261,16 +368,7 @@ program
 	)
 	.action(async (query, options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError(
-					"NO_ACCOUNTS",
-					"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
-				);
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account);
+			const provider = await resolveProvider(options.account);
 
 			const limit = parseInt(options.limit, 10);
 			if (isNaN(limit) || limit < 1) {
@@ -280,7 +378,7 @@ program
 				);
 			}
 
-			// D-07: Pass search query directly to Gmail (D-08: returns same fields as list)
+			// D-07: Pass search query directly to provider (D-08: returns same fields as list)
 			const result = await provider.search(query, limit);
 
 			console.log(JSON.stringify(result));
@@ -294,6 +392,10 @@ program
 program
 	.command("send")
 	.description("Send a new email")
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
 	.requiredOption(
 		"--to <addresses>",
 		"Recipient email addresses (comma-separated)",
@@ -306,16 +408,7 @@ program
 	.option("--attach <path>", "Attachment file path (can be repeated)", [])
 	.action(async (options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError(
-					"NO_ACCOUNTS",
-					"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
-				);
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account);
+			const provider = await resolveProvider(options.account);
 
 			// D-10: body is required for send (either --body or --body-file-path)
 			let body = options.body || "";
@@ -387,21 +480,16 @@ program
 	.command("reply")
 	.description("Reply to an existing email (with empty body)")
 	.argument("<id>", "ID of message to reply to")
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
 	.requiredOption("--to <addresses>", "Reply recipients (comma-separated)")
 	.option("--cc <addresses>", "CC recipients (comma-separated)")
 	.option("--bcc <addresses>", "BCC recipients (comma-separated)")
 	.action(async (id, options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError(
-					"NO_ACCOUNTS",
-					"No accounts configured. Run 'mail-cli account add --provider gmail' first.",
-				);
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account);
+			const provider = await resolveProvider(options.account);
 
 			// Parse comma-separated addresses
 			const to = options.to.split(",").map((s: string) => s.trim());
@@ -434,6 +522,10 @@ program
 	.command("mark")
 	.description("Mark email as read or unread")
 	.argument("<id>", "Email ID")
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
 	.option("--read", "Mark as read")
 	.option("--unread", "Mark as unread")
 	.action(async (id, options) => {
@@ -452,13 +544,7 @@ program
 				);
 			}
 
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError("NO_ACCOUNTS", "No accounts configured.");
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account!);
+			const provider = await resolveProvider(options.account);
 			await provider.mark(id, !!options.read);
 
 			// D-05: Output {"ok": true}
@@ -474,19 +560,17 @@ program
 	.command("move")
 	.description("Move email to a folder/label")
 	.argument("<id>", "Email ID")
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
 	.requiredOption(
 		"--folder <name>",
 		"Target folder/label name (provider-native)",
 	)
 	.action(async (id, options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError("NO_ACCOUNTS", "No accounts configured.");
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account!);
+			const provider = await resolveProvider(options.account);
 			await provider.move(id, options.folder);
 
 			console.log(JSON.stringify({ ok: true }));
@@ -501,15 +585,13 @@ program
 	.command("delete")
 	.description("Move email to trash")
 	.argument("<id>", "Email ID")
-	.action(async (id) => {
+	.option(
+		"--account <id>",
+		"Account ID (email:provider format)",
+	)
+	.action(async (id, options) => {
 		try {
-			const accounts = await listAccounts();
-			if (accounts.length === 0) {
-				throw new CLIError("NO_ACCOUNTS", "No accounts configured.");
-			}
-
-			const account = accounts[0];
-			const provider = new GmailProvider(account!);
+			const provider = await resolveProvider(options.account);
 			await provider.delete(id);
 
 			console.log(JSON.stringify({ ok: true }));
