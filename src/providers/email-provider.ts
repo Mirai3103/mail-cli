@@ -25,6 +25,7 @@ export interface Attachment {
 export interface Folder {
   id: string;
   name: string;
+  type?: "system" | "user";
 }
 
 export interface SendEmailOptions {
@@ -52,6 +53,9 @@ export abstract class EmailProvider {
   abstract mark(id: string, read: boolean): Promise<void>;
   abstract move(id: string, folder: string): Promise<void>;
   abstract delete(id: string): Promise<void>;
+
+  // Mailbox status
+  abstract status(): Promise<{ unread: number; total: number }>;
 
   // Folders/labels
   abstract listFolders(): Promise<Folder[]>;
