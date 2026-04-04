@@ -392,7 +392,7 @@ program
       }
 
       const account = accounts[0];
-      const provider = new GmailProvider(account);
+      const provider = new GmailProvider(account!);
       await provider.mark(id, !!options.read);
 
       // D-05: Output {"ok": true}
@@ -417,7 +417,7 @@ program
       }
 
       const account = accounts[0];
-      const provider = new GmailProvider(account);
+      const provider = new GmailProvider(account!);
       await provider.move(id, options.folder);
 
       console.log(JSON.stringify({ ok: true }));
@@ -440,7 +440,7 @@ program
       }
 
       const account = accounts[0];
-      const provider = new GmailProvider(account);
+      const provider = new GmailProvider(account!);
       await provider.delete(id);
 
       console.log(JSON.stringify({ ok: true }));
