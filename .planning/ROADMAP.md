@@ -13,7 +13,7 @@
 | 3 | Core Commands | 1/2 | In Progress|  |
 | 4 | Email Management | 3/3 | Complete   | 2026-04-04 |
 | 5 | Multi-Provider | 2/2 | Complete   | 2026-04-04 |
-| 6 | Polish | Batch operations, error output, startup optimization | ORG-05 | — |
+| 6 | Polish | 3/3 | Complete   | 2026-04-04 |
 
 ---
 
@@ -162,9 +162,9 @@
 - README for npx distribution
 
 ### Plans
-- [ ] 06-01-PLAN.md — Config file with auto-create and env override (wave 1)
-- [ ] 06-02-PLAN.md — Batch operations (--ids flag) for mark/move/delete (wave 2)
-- [ ] 06-03-PLAN.md — Startup optimization (remove isomorphic-fetch) + README (wave 3)
+- [x] 06-01-PLAN.md — Config file with auto-create and env override (wave 1)
+- [x] 06-02-PLAN.md — Batch operations (--ids flag) for mark/move/delete (wave 2)
+- [x] 06-03-PLAN.md — Startup optimization (remove isomorphic-fetch) + README (wave 3)
 
 ---
 
