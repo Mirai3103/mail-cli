@@ -521,11 +521,12 @@ program
 program
 	.command("mark")
 	.description("Mark email as read or unread")
-	.argument("<id>", "Email ID")
+	.argument("[id]", "Email ID (use --ids for batch)")
 	.option(
 		"--account <id>",
 		"Account ID (email:provider format)",
 	)
+	.option("--ids <list>", "Comma-separated list of email IDs (e.g., --ids 1,2,3)")
 	.option("--read", "Mark as read")
 	.option("--unread", "Mark as unread")
 	.action(async (id, options) => {
@@ -545,10 +546,41 @@ program
 			}
 
 			const provider = await resolveProvider(options.account);
-			await provider.mark(id, !!options.read);
+			const isRead = !!options.read;
 
-			// D-05: Output {"ok": true}
-			console.log(JSON.stringify({ ok: true }));
+			// D-01: Parse --ids into array
+			let ids: string[] = [];
+			if (options.ids) {
+				ids = options.ids.split(",").map((s: string) => s.trim()).filter(Boolean);
+				if (ids.length === 0) {
+					throw new CLIError("INVALID_IDS", "--ids must contain at least one ID");
+				}
+			} else if (id) {
+				ids = [id];
+			} else {
+				throw new CLIError("MISSING_ID", "Either <id> or --ids is required");
+			}
+
+			// D-02: Batch operation with partial failure tracking
+			const failed: Array<{id: string; error: {code: string; message: string}}> = [];
+			for (const emailId of ids) {
+				try {
+					await provider.mark(emailId, isRead);
+				} catch (err) {
+					if (err instanceof CLIError) {
+						failed.push({ id: emailId, error: { code: err.code, message: err.message } });
+					} else {
+						failed.push({ id: emailId, error: { code: "UNKNOWN", message: (err as Error).message } });
+					}
+				}
+			}
+
+			// D-02, D-03: Output format
+			if (failed.length === 0) {
+				console.log(JSON.stringify({ ok: true }));
+			} else {
+				console.log(JSON.stringify({ ok: true, failed }));
+			}
 		} catch (err) {
 			printError(err as Error);
 			process.exit(1);
@@ -559,11 +591,12 @@ program
 program
 	.command("move")
 	.description("Move email to a folder/label")
-	.argument("<id>", "Email ID")
+	.argument("[id]", "Email ID (use --ids for batch)")
 	.option(
 		"--account <id>",
 		"Account ID (email:provider format)",
 	)
+	.option("--ids <list>", "Comma-separated list of email IDs (e.g., --ids 1,2,3)")
 	.requiredOption(
 		"--folder <name>",
 		"Target folder/label name (provider-native)",
@@ -571,9 +604,40 @@ program
 	.action(async (id, options) => {
 		try {
 			const provider = await resolveProvider(options.account);
-			await provider.move(id, options.folder);
 
-			console.log(JSON.stringify({ ok: true }));
+			// D-01: Parse --ids into array
+			let ids: string[] = [];
+			if (options.ids) {
+				ids = options.ids.split(",").map((s: string) => s.trim()).filter(Boolean);
+				if (ids.length === 0) {
+					throw new CLIError("INVALID_IDS", "--ids must contain at least one ID");
+				}
+			} else if (id) {
+				ids = [id];
+			} else {
+				throw new CLIError("MISSING_ID", "Either <id> or --ids is required");
+			}
+
+			// D-02: Batch operation with partial failure tracking
+			const failed: Array<{id: string; error: {code: string; message: string}}> = [];
+			for (const emailId of ids) {
+				try {
+					await provider.move(emailId, options.folder);
+				} catch (err) {
+					if (err instanceof CLIError) {
+						failed.push({ id: emailId, error: { code: err.code, message: err.message } });
+					} else {
+						failed.push({ id: emailId, error: { code: "UNKNOWN", message: (err as Error).message } });
+					}
+				}
+			}
+
+			// D-02, D-03: Output format
+			if (failed.length === 0) {
+				console.log(JSON.stringify({ ok: true }));
+			} else {
+				console.log(JSON.stringify({ ok: true, failed }));
+			}
 		} catch (err) {
 			printError(err as Error);
 			process.exit(1);
@@ -584,17 +648,49 @@ program
 program
 	.command("delete")
 	.description("Move email to trash")
-	.argument("<id>", "Email ID")
+	.argument("[id]", "Email ID (use --ids for batch)")
 	.option(
 		"--account <id>",
 		"Account ID (email:provider format)",
 	)
+	.option("--ids <list>", "Comma-separated list of email IDs (e.g., --ids 1,2,3)")
 	.action(async (id, options) => {
 		try {
 			const provider = await resolveProvider(options.account);
-			await provider.delete(id);
 
-			console.log(JSON.stringify({ ok: true }));
+			// D-01: Parse --ids into array
+			let ids: string[] = [];
+			if (options.ids) {
+				ids = options.ids.split(",").map((s: string) => s.trim()).filter(Boolean);
+				if (ids.length === 0) {
+					throw new CLIError("INVALID_IDS", "--ids must contain at least one ID");
+				}
+			} else if (id) {
+				ids = [id];
+			} else {
+				throw new CLIError("MISSING_ID", "Either <id> or --ids is required");
+			}
+
+			// D-02: Batch operation with partial failure tracking
+			const failed: Array<{id: string; error: {code: string; message: string}}> = [];
+			for (const emailId of ids) {
+				try {
+					await provider.delete(emailId);
+				} catch (err) {
+					if (err instanceof CLIError) {
+						failed.push({ id: emailId, error: { code: err.code, message: err.message } });
+					} else {
+						failed.push({ id: emailId, error: { code: "UNKNOWN", message: (err as Error).message } });
+					}
+				}
+			}
+
+			// D-02, D-03: Output format
+			if (failed.length === 0) {
+				console.log(JSON.stringify({ ok: true }));
+			} else {
+				console.log(JSON.stringify({ ok: true, failed }));
+			}
 		} catch (err) {
 			printError(err as Error);
 			process.exit(1);
