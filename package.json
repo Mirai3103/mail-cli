@@ -8,7 +8,7 @@
 	"homepage": "https://github.com/Mirai3103/mail-cli",
 	"version": "0.0.6",
 	"scripts": {
-		"lint": "bunx --bun @biomejs/biome lint --write",
+		"lint": "bunx --bun @biomejs/biome lint --write src/",
 		"format": "bunx --bun @biomejs/biome format --write",
 		"build": "npx tsup ",
 		"prepublishOnly": "bun run build"
