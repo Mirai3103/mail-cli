@@ -7,7 +7,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-6 (shipped 2026-04-05)
-- 🚧 **v1.1 Architecture Refactor** — Phases 7-12 (in progress)
+- ✅ **v1.1 Architecture Refactor** — Phases 7-10 complete, 11-12 in progress
 - 📋 **v2.0** — Phases 13+ (planned)
 
 ## Overview
@@ -16,10 +16,10 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
 
 ## Phases
 
-- [ ] **Phase 7: Clean Architecture Foundation** - Folder structure, interfaces, DI container
-- [ ] **Phase 8: Unit & Integration Testing** - Test infrastructure, ≥80% coverage
-- [ ] **Phase 9: Logging, Error Handling & Code Quality** - Centralized logging, global error handler, linting
-- [ ] **Phase 10: CI/CD Pipeline & Documentation** - GitHub Actions, architecture diagram, docs
+- [x] **Phase 7: Clean Architecture Foundation** - Folder structure, interfaces, DI container
+- [x] **Phase 8: Unit & Integration Testing** - Test infrastructure, ≥80% coverage
+- [x] **Phase 9: Logging, Error Handling & Code Quality** - Centralized logging, global error handler, linting
+- [x] **Phase 10: CI/CD Pipeline & Documentation** - GitHub Actions, architecture diagram, docs
 - [ ] **Phase 11: Attachment Download** - Save attachments to local filesystem
 - [ ] **Phase 12: Draft Management** - Save/load/edit/delete drafts
 
@@ -69,8 +69,8 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   6. `bun test` exits with code 0 (all tests pass)
 **Plans**: 3 plans
 - [x] 08-01-PLAN.md — Test mocks + Service unit tests (MailboxService, EmailService, ComposeService, AccountService)
-- [ ] 08-02-PLAN.md — Command unit tests (11 command handlers)
-- [ ] 08-03-PLAN.md — Integration tests (TokenStorageImpl, ConfigImpl)
+- [x] 08-02-PLAN.md — Command unit tests (11 command handlers)
+- [x] 08-03-PLAN.md — Integration tests (TokenStorageImpl, ConfigImpl)
 
 #### Phase 9: Logging, Error Handling & Code Quality
 **Goal**: Centralized logging, global error handling, and enforced code quality standards
@@ -84,12 +84,18 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   5. No magic numbers exist in codebase; all constants are named and exported
   6. `bun run lint` passes with zero warnings
   7. `bun run format` produces consistent formatting
-**Plans**: TBD
+**Plans**: 3 plans
+- [x] 09-01-PLAN.md — Logger service + constants + exit codes
+- [x] 09-02-PLAN.md — Global error handler + error codes
+- [x] 09-03-PLAN.md — Biome lint/format setup
 
 #### Phase 10: CI/CD Pipeline & Documentation
 **Goal**: Automated CI/CD pipeline and comprehensive documentation
 **Depends on**: Phase 9
 **Requirements**: CICD-01, CICD-02, CICD-03, DOCS-01, DOCS-02, DOCS-03
+**Plans**: 2 plans
+- [x] 10-01-PLAN.md — CI/CD Pipeline (GitHub Actions workflow + CONTRIBUTING.md)
+- [x] 10-02-PLAN.md — Architecture Diagram + README Update
 **Success Criteria** (what must be TRUE):
   1. GitHub Actions workflow triggers on push and pull request
   2. CI pipeline runs `bun run lint` and `bun test` on every push
@@ -97,7 +103,6 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   4. Architecture diagram exists and shows Clean Architecture layers and data flow
   5. README.md reflects the new folder structure
   6. CONTRIBUTING.md explains how to run tests and lint locally
-**Plans**: TBD
 
 #### Phase 11: Attachment Download
 **Goal**: Users can download email attachments to local filesystem
@@ -108,7 +113,9 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   2. Attachments are saved to user-specified directory or current directory
   3. Original filename is preserved from Content-Disposition header
   4. Large attachments stream to disk without full in-memory load
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 11-01-PLAN.md — Core attachment download (EmailProviderPort + Gmail/Outlook implementations)
+- [ ] 11-02-PLAN.md — CLI integration (--download flag, directory selection, streaming)
 
 #### Phase 12: Draft Management
 **Goal**: Users can save, load, edit, and delete email drafts
@@ -134,11 +141,11 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 4. Email Management | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 5. Multi-Provider | v1.0 | 2/2 | Complete | 2026-04-05 |
 | 6. Polish | v1.0 | 5/5 | Complete | 2026-04-05 |
-| 7. Clean Architecture Foundation | v1.1 | 3/3 | Complete   | 2026-04-05 |
-| 8. Unit & Integration Testing | v1.1 | 1/3 | In Progress|  |
-| 9. Logging, Error Handling & Code Quality | v1.1 | 0/? | Not started | - |
-| 10. CI/CD Pipeline & Documentation | v1.1 | 0/? | Not started | - |
-| 11. Attachment Download | v1.1 | 0/? | Not started | - |
+| 7. Clean Architecture Foundation | v1.1 | 3/3 | Complete | 2026-04-05 |
+| 8. Unit & Integration Testing | v1.1 | 3/3 | Complete | 2026-04-05 |
+| 9. Logging, Error Handling & Code Quality | v1.1 | 3/3 | Complete | 2026-04-05 |
+| 10. CI/CD Pipeline & Documentation | v1.1 | 2/2 | Complete | 2026-04-05 |
+| 11. Attachment Download | v1.1 | 0/2 | Not started | - |
 | 12. Draft Management | v1.1 | 0/? | Not started | - |
 
 ---
