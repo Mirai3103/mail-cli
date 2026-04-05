@@ -68,4 +68,13 @@ describe("account command", () => {
 		const removeCmd = command!.commands.find((c) => c.name() === "remove");
 		expect(removeCmd!.optsWithGlobals().account).toBeUndefined();
 	});
+
+	test("'remove' subcommand has --all option", () => {
+		const { registerAccountCommand } = require("./account");
+		const program = new Command();
+		registerAccountCommand(program);
+		const command = program.commands.find((c) => c.name() === "account");
+		const removeCmd = command!.commands.find((c) => c.name() === "remove");
+		expect(removeCmd!.optsWithGlobals().all).toBeUndefined();
+	});
 });

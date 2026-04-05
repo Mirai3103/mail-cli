@@ -45,10 +45,16 @@ export function registerAccountCommand(program: Command) {
 		.command("remove")
 		.description("Remove an email account")
 		.requiredOption("--account <id>", "Account ID (email:provider format)")
+		.option("--all", "Remove all connected accounts")
 		.action(async (options) => {
 			try {
-				const result = await accountService.removeAccount(options.account);
-				console.log(JSON.stringify(result));
+				if (options.all) {
+					const result = await accountService.removeAllAccounts();
+					console.log(JSON.stringify(result));
+				} else {
+					const result = await accountService.removeAccount(options.account);
+					console.log(JSON.stringify(result));
+				}
 			} catch (err) {
 				const { printError } = await import("../utils/errors.js");
 				printError(err as Error);

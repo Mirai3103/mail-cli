@@ -7,7 +7,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-6 (shipped 2026-04-05)
-- ✅ **v1.1 Architecture Refactor** — Phases 7-10 complete, 11-12 in progress
+- ✅ **v1.1 Architecture Refactor** — All 12 phases complete, merged to main 2026-04-05
 - 📋 **v2.0** — Phases 13+ (planned)
 
 ## Overview
@@ -20,8 +20,8 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
 - [x] **Phase 8: Unit & Integration Testing** - Test infrastructure, ≥80% coverage
 - [x] **Phase 9: Logging, Error Handling & Code Quality** - Centralized logging, global error handler, linting
 - [x] **Phase 10: CI/CD Pipeline & Documentation** - GitHub Actions, architecture diagram, docs
-- [ ] **Phase 11: Attachment Download** - Save attachments to local filesystem
-- [ ] **Phase 12: Draft Management** - Save/load/edit/delete drafts
+- [x] **Phase 11: Attachment Download** - Save attachments to local filesystem ✅
+- [x] **Phase 12: Draft Management** - Save/load/edit/delete drafts ✅
 
 ## Phase Details
 
@@ -37,7 +37,7 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
 
 </details>
 
-### 🚧 v1.1 Architecture Refactor (In Progress)
+### ✅ v1.1 Architecture Refactor (Complete)
 
 **Milestone Goal:** Restructure CLI app for maintainability, modularity, and testability while preserving the existing CLI experience unchanged.
 
