@@ -1,0 +1,16 @@
+import { loadConfig, getConfigPath } from "../utils/config.js";
+import type { ConfigPort } from "../types/ports.js";
+
+/**
+ * ConfigImpl implements ConfigPort using file-based config storage.
+ * Config is loaded from ~/.emailcli/config.json with environment variable overrides.
+ */
+export class ConfigImpl implements ConfigPort {
+	async loadConfig() {
+		return await loadConfig();
+	}
+
+	getConfigPath(): string {
+		return getConfigPath();
+	}
+}
