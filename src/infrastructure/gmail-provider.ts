@@ -511,8 +511,7 @@ export class GmailProvider implements EmailProviderPort {
 			return {
 				content: decoded,
 				filename: filename,
-				mimeType:
-					meta?.mimeType || "application/octet-stream",
+				mimeType: meta?.mimeType || "application/octet-stream",
 				size: response.data.size
 					? parseInt(String(response.data.size), 10)
 					: decoded.length,
@@ -541,10 +540,7 @@ export class GmailProvider implements EmailProviderPort {
 				return part;
 			}
 			if (partObj.parts) {
-				const found = this.findAttachmentInParts(
-					partObj.parts,
-					attachmentId,
-				);
+				const found = this.findAttachmentInParts(partObj.parts, attachmentId);
 				if (found) return found;
 			}
 		}

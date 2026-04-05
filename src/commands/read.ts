@@ -35,9 +35,7 @@ export function registerReadCommand(program: Command) {
 				if (options.download) {
 					const email = result as Email;
 					const targetDir =
-						typeof options.download === "string"
-							? options.download
-							: ".";
+						typeof options.download === "string" ? options.download : ".";
 
 					// Ensure directory exists
 					await mkdir(targetDir, { recursive: true });
@@ -49,18 +47,14 @@ export function registerReadCommand(program: Command) {
 						size: number;
 					}[] = [];
 					for (const attachment of email.attachments || []) {
-						const downloadResult =
-							await provider.downloadAttachment(
-								email.id,
-								attachment.id,
-								attachment.filename,
-							);
+						const downloadResult = await provider.downloadAttachment(
+							email.id,
+							attachment.id,
+							attachment.filename,
+						);
 
 						// Sanitize filename to prevent path traversal
-						const safeFilename = attachment.filename.replace(
-							/[/\\]/g,
-							"_",
-						);
+						const safeFilename = attachment.filename.replace(/[/\\]/g, "_");
 						const filePath = resolve(targetDir, safeFilename);
 
 						// Write attachment content to disk using Bun.write for streaming

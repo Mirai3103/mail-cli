@@ -69,7 +69,7 @@ export async function ensureConfigDir(): Promise<void> {
  */
 export async function loadConfig(): Promise<Config> {
 	const configPath = getConfigPath();
-	
+
 	// Check if config file exists
 	let config: Config;
 

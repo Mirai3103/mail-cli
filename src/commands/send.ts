@@ -1,9 +1,6 @@
 import * as fs from "node:fs/promises";
 import type { Command } from "commander";
-import {
-	createComposeService,
-	draftService,
-} from "../container.js";
+import { createComposeService, draftService } from "../container.js";
 import { CLIError } from "../utils/errors.js";
 import { resolveProvider } from "./utils/resolve-provider.js";
 
@@ -57,10 +54,7 @@ export function registerSendCommand(program: Command) {
 					// Allow body file to override draft body
 					if (options.bodyFilePath) {
 						try {
-							body = await fs.readFile(
-								options.bodyFilePath,
-								"utf-8",
-							);
+							body = await fs.readFile(options.bodyFilePath, "utf-8");
 						} catch {
 							throw new CLIError(
 								"FILE_NOT_FOUND",
@@ -99,9 +93,7 @@ export function registerSendCommand(program: Command) {
 					// Delete the draft after successful send
 					await draftService.delete(options.draft, account);
 
-					console.log(
-						JSON.stringify({ id: result.id, sent: true }),
-					);
+					console.log(JSON.stringify({ id: result.id, sent: true }));
 					return;
 				}
 
@@ -163,9 +155,7 @@ export function registerSendCommand(program: Command) {
 				// --save-draft saves without sending
 				if (options.saveDraft) {
 					const draft = await draftService.save(sendOptions, account);
-					console.log(
-						JSON.stringify({ id: draft.id, saved: true }),
-					);
+					console.log(JSON.stringify({ id: draft.id, saved: true }));
 					return;
 				}
 

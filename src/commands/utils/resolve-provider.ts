@@ -1,7 +1,4 @@
-import {
-	GmailProvider,
-	OutlookProvider,
-} from "../../infrastructure/index.js";
+import { GmailProvider, OutlookProvider } from "../../infrastructure/index.js";
 import { listAccounts } from "../../auth/index.js";
 import { CLIError } from "../../utils/errors.js";
 

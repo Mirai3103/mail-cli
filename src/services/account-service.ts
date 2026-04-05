@@ -73,7 +73,9 @@ export class AccountService {
 
 	async removeAllAccounts(): Promise<{ removed: string[] }> {
 		const accounts = await this.tokenStorage.listAccounts();
-		await Promise.all(accounts.map((account) => this.tokenStorage.deleteTokens(account)));
+		await Promise.all(
+			accounts.map((account) => this.tokenStorage.deleteTokens(account)),
+		);
 		return { removed: accounts };
 	}
 }
