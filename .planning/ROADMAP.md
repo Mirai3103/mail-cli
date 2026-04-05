@@ -68,7 +68,7 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   5. `bun test` reports ≥80% coverage on business logic
   6. `bun test` exits with code 0 (all tests pass)
 **Plans**: 3 plans
-- [ ] 08-01-PLAN.md — Test mocks + Service unit tests (MailboxService, EmailService, ComposeService, AccountService)
+- [x] 08-01-PLAN.md — Test mocks + Service unit tests (MailboxService, EmailService, ComposeService, AccountService)
 - [ ] 08-02-PLAN.md — Command unit tests (11 command handlers)
 - [ ] 08-03-PLAN.md — Integration tests (TokenStorageImpl, ConfigImpl)
 
@@ -135,7 +135,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 5. Multi-Provider | v1.0 | 2/2 | Complete | 2026-04-05 |
 | 6. Polish | v1.0 | 5/5 | Complete | 2026-04-05 |
 | 7. Clean Architecture Foundation | v1.1 | 3/3 | Complete   | 2026-04-05 |
-| 8. Unit & Integration Testing | v1.1 | 0/3 | Not started | - |
+| 8. Unit & Integration Testing | v1.1 | 1/3 | In Progress|  |
 | 9. Logging, Error Handling & Code Quality | v1.1 | 0/? | Not started | - |
 | 10. CI/CD Pipeline & Documentation | v1.1 | 0/? | Not started | - |
 | 11. Attachment Download | v1.1 | 0/? | Not started | - |

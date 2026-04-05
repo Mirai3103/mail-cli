@@ -22,12 +22,12 @@ Requirements for v1.1 Architecture Refactor milestone.
 
 ### Unit & Integration Testing (TEST)
 
-- [ ] **TEST-01**: Unit tests for all use case implementations
+- [x] **TEST-01**: Unit tests for all use case implementations
 - [ ] **TEST-02**: Unit tests for command handlers (presentation layer)
 - [ ] **TEST-03**: Integration tests for token storage operations (read/write/delete)
 - [ ] **TEST-04**: Integration tests for config storage operations
 - [ ] **TEST-05**: Test coverage ≥80% for business logic (use cases, domain types)
-- [ ] **TEST-06**: All tests pass via `bun test`
+- [x] **TEST-06**: All tests pass via `bun test`
 
 ### Logging & Error Handling (LOG)
 
@@ -102,12 +102,12 @@ Not in scope for v1.1. Deferred for future milestones.
 | DI-01 | Phase 7 | Complete |
 | DI-02 | Phase 7 | Complete |
 | DI-03 | Phase 7 | Complete |
-| TEST-01 | Phase 8 | Pending |
+| TEST-01 | Phase 8 | Complete |
 | TEST-02 | Phase 8 | Pending |
 | TEST-03 | Phase 8 | Pending |
 | TEST-04 | Phase 8 | Pending |
 | TEST-05 | Phase 8 | Pending |
-| TEST-06 | Phase 8 | Pending |
+| TEST-06 | Phase 8 | Complete |
 | LOG-01 | Phase 9 | Pending |
 | LOG-02 | Phase 9 | Pending |
 | LOG-03 | Phase 9 | Pending |
