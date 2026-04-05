@@ -51,7 +51,10 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   3. Provider, token storage, and config use port interfaces with implementations swappable
   4. Running any existing CLI command produces identical output to before refactor
   5. Services and data clients are injectable via constructor for testing
-**Plans**: TBD
+**Plans**: 3 plans
+- [x] 07-01-PLAN.md — Types/ + Infrastructure layer (domain types, port interfaces, provider implementations)
+- [x] 07-02-PLAN.md — Services/ layer (MailboxService, EmailService, ComposeService, AccountService)
+- [x] 07-03-PLAN.md — Commands/ layer + container.ts + thin cli.ts bootstrap
 
 #### Phase 8: Unit & Integration Testing
 **Goal**: Comprehensive test suite with ≥80% coverage for business logic
@@ -128,7 +131,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 4. Email Management | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 5. Multi-Provider | v1.0 | 2/2 | Complete | 2026-04-05 |
 | 6. Polish | v1.0 | 5/5 | Complete | 2026-04-05 |
-| 7. Clean Architecture Foundation | v1.1 | 0/? | Not started | - |
+| 7. Clean Architecture Foundation | v1.1 | 1/3 | In Progress|  |
 | 8. Unit & Integration Testing | v1.1 | 0/? | Not started | - |
 | 9. Logging, Error Handling & Code Quality | v1.1 | 0/? | Not started | - |
 | 10. CI/CD Pipeline & Documentation | v1.1 | 0/? | Not started | - |
