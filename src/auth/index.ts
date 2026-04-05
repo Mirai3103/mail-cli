@@ -8,3 +8,4 @@ export {
 	refreshAccessToken,
 	initOAuthClient,
 } from "./oauth.js";
+export { getOutlookAuthToken, initOutlookClient } from "./outlook-oauth.js";
