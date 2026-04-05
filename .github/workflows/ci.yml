@@ -38,7 +38,7 @@ jobs:
         run: bun run lint
 
       - name: Run tests with coverage
-        run: bun test --coverage --reporter=verbose
+        run: bun test --coverage
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
