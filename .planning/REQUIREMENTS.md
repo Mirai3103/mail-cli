@@ -12,11 +12,11 @@ Requirements for v1.1 Architecture Refactor milestone.
 - [ ] **ARCH-01**: Source code restructured into Clean Architecture layers (presentation/, application/, infrastructure/, domain/)
 - [x] **ARCH-02**: CLI commands separated from business logic — commands delegate to use cases
 - [x] **ARCH-03**: Clear interface boundaries between layers using port interfaces (EmailProviderPort, TokenStoragePort, ConfigPort)
-- [ ] **ARCH-04**: Existing CLI commands and flags remain functionally unchanged
+- [x] **ARCH-04**: Existing CLI commands and flags remain functionally unchanged
 
 ### Dependency Injection (DI)
 
-- [ ] **DI-01**: Services and data clients injectable via constructor injection
+- [x] **DI-01**: Services and data clients injectable via constructor injection
 - [x] **DI-02**: DI container wires infrastructure to use cases
 - [x] **DI-03**: Mock implementations injectable for unit testing
 
@@ -98,8 +98,8 @@ Not in scope for v1.1. Deferred for future milestones.
 | ARCH-01 | Phase 7 | Pending |
 | ARCH-02 | Phase 7 | Complete |
 | ARCH-03 | Phase 7 | Complete |
-| ARCH-04 | Phase 7 | Pending |
-| DI-01 | Phase 7 | Pending |
+| ARCH-04 | Phase 7 | Complete |
+| DI-01 | Phase 7 | Complete |
 | DI-02 | Phase 7 | Complete |
 | DI-03 | Phase 7 | Complete |
 | TEST-01 | Phase 8 | Pending |

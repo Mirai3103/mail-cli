@@ -1,269 +1,423 @@
-# Domain Pitfalls: CLI Email Client
+# Domain Pitfalls: TypeScript CLI Clean Architecture Refactor
 
-**Project:** mail-cli
-**Researched:** 2026-04-04
-**Confidence:** MEDIUM (based on domain knowledge, not live verification)
+**Domain:** Refactoring existing TypeScript CLI application to Clean Architecture with dependency injection
+**Project:** mail-cli (v1.1 Architecture Refactor milestone)
+**Researched:** 2026-04-05
+**Confidence:** MEDIUM — Based on established software design principles; web search tools were unavailable during research session
 
-> **Note:** WebSearch was unavailable during research. Findings are based on training knowledge of CLI tools, Gmail API, and Microsoft Graph API. Claims should be verified against official docs before treating as authoritative.
+---
+
+> **Note:** This file covers architecture refactoring pitfalls. For email/CLI runtime pitfalls, see the previous version of this file. The milestone context focuses on common mistakes when restructuring a working CLI app to be more testable and modular via Clean Architecture and DI.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, security incidents, or broken production use.
+Mistakes that cause rewrites, defeat refactoring goals, or introduce new耦合.
 
-### Pitfall 1: Token Storage in Plain Text
+### Pitfall 1: Anemic Domain Layer (Business Logic in Commands)
 
-**What goes wrong:** OAuth refresh tokens stored in config files, environment variables, or localStorage-equivalents get committed to git or read by other processes.
+**What goes wrong:** CLI command handlers become thin wrappers that delegate to services, but all "business logic" lives in the services or, worse, still in the commands. Domain entities are data bags with only getters/setters.
 
-**Why it happens:** Developers prioritize "it works" over "it's secure" during initial development. The temptation to store tokens in `~/.config/mail-cli.json` is high.
+**Why it happens:**
+- Developers conflate "layered folders" with "Clean Architecture"
+- Creating true domain entities with rich behavior feels like over-engineering for a CLI
+- Existing code is mostly procedural (get email, format output) so domain objects end up as data-transfer objects in disguise
+- "We can add behavior later" leads to anemic models that are never enriched
 
 **Consequences:**
-- Compromised account access if repo is public or device is shared
-- Full account takeover since refresh tokens are powerful
-- User distrust of the tool
+- Hard to unit test business rules in isolation from infrastructure
+- Services become God objects with hundreds of methods
+- Adding new features requires modifying multiple layers anyway
+- Refactoring to Clean Architecture without extracting domain logic is just shuffling code
 
 **Prevention:**
-- Store tokens in OS keychain (Keychain on macOS, libsecret on Linux, Credential Manager on Windows)
-- Never log tokens, even at debug level
-- Add `*.token.json` and `*.refresh` to global gitignore pattern
-- Consider using OS-native credential storage APIs
+- Define domain entities even if simple (e.g., `Email`, `Draft`, `Attachment`, `Folder`)
+- Domain entities should have behavior: `email.isUnread()`, `draft.hasRecipients()`, `folder.supportsHierarchy()`
+- Services orchestrate domain objects; they should not contain business logic themselves
+- Use value objects for validated concepts (e.g., `EmailAddress`, `FolderPath`, `MessageId`)
+- Rule: If a class has only getters/setters and no behavior, it is not a domain object
 
-**Warning signs:**
-- `grep -r "token" config/` shows raw tokens
-- `.gitignore` missing token file patterns
-- No encryption at rest for stored credentials
+**Better pattern:**
+```typescript
+// Anti-pattern: Anemic
+class Email {
+  constructor(
+    public id: string,
+    public subject: string,
+    public body: string,
+    public read: boolean  // raw data, no encapsulation
+  ) {}
+}
 
-**Phase:** Auth implementation (Phase 2 likely)
+// Better: Rich domain
+class Email {
+  constructor(
+    private readonly id: MessageId,
+    private readonly headers: EmailHeaders,
+    private readonly body: EmailBody,
+    private readonly attachments: Attachment[],
+    private read: boolean
+  ) {}
+
+  markAsRead(): Email {
+    return new Email(this.id, this.headers, this.body, this.attachments, true);
+  }
+
+  isUnread(): boolean {
+    return !this.read;
+  }
+
+  isFrom(sender: EmailAddress): boolean {
+    return this.headers.from.equals(sender);
+  }
+
+  hasAttachments(): boolean {
+    return this.attachments.length > 0;
+  }
+}
+```
+
+**Warning signs:** Classes named `*Dto`, `*Data`, `*Model` that contain only public properties; services with methods like `processEmail(data)` that take raw objects and return raw objects
 
 ---
 
-### Pitfall 2: Gmail API Rate Limit Blindness
+### Pitfall 2: Premature or Lopsided Provider Abstraction
 
-**What goes wrong:** Requests fail silently or with opaque errors when hitting Gmail API quotas. Daily limits (1,000,000,000/day), per-second limits (250-1000/sec depending on scope), and per-user limits (250/sec) are not handled.
+**What goes wrong:** Creating elaborate provider abstractions before understanding what actually differs between Gmail and Outlook leads to leaky abstractions that neither provider fits cleanly. Alternatively, not abstracting at all and having Gmail logic scattered throughout.
 
-**Why it happens:** Gmail API docs show limits but don't emphasize exponential backoff requirements. Developers assume "it's just API calls."
+**Why it happens:**
+- "Abstraction" feels like good architecture
+- Hard to know what differs without implementing one provider fully first
+- Teams abstract too early to avoid "coupling" or delay the second provider
+- Gmail was built first, so Outlook gets force-fit into Gmail-shaped interfaces
 
 **Consequences:**
-- Bulk operations (sync, search) fail halfway through
-- "Quota exceeded" errors that block the user at worst possible time
-- Data inconsistency if partial operations commit
+- `EmailProvider` interface with 30+ methods, half of which throw `NotSupportedByProvider`
+- Tests mock the abstraction, but real behavior differs from mock expectations
+- Provider-specific features are crippled to fit the common interface
+- Changing one provider requires touching the interface and all implementations
 
 **Prevention:**
-- Implement exponential backoff with jitter from day one
-- Track request counts and respect per-second limits
-- Batch operations where possible (Gmail batch API)
-- Add `--dry-run` flag for bulk operations to estimate quota cost
+- Implement Gmail fully before creating any abstraction
+- When adding Outlook, extract only the *actual* common patterns
+- Accept that some operations are provider-specific; expose them directly without abstraction
+- Prefer composition over inheritance for provider differences
+- Use the Interface Segregation Principle: many small interfaces, not one God interface
 
-**Warning signs:**
-- Single `messages.list` call processes thousands without throttling
-- No retry logic with backoff in HTTP client
-- Missing `X-Retry-After` header handling
+**Better pattern for mail-cli:**
+```typescript
+// Concrete providers, not forced abstraction
+interface EmailProvider {
+  listEmails(folder: FolderPath, options?: ListOptions): Promise<Email[]>;
+  sendEmail(email: OutboundEmail): Promise<MessageId>;
+  // Only methods that naturally belong to all providers
+}
 
-**Phase:** API integration layer (Phase 3 likely)
+// Gmail-specific extensions accessed via provider-specific interface
+interface GmailProvider extends EmailProvider {
+  getThread(threadId: string): Promise<Thread>;
+  modifyLabels(messageId: MessageId, addLabels: Label[], removeLabels: Label[]): Promise<void>;
+}
+
+interface OutlookProvider extends EmailProvider {
+  // Outlook-specific methods
+}
+
+// Only abstract what is genuinely common
+// Provider-specific features accessed via typed cast or separate interface
+```
+
+**Warning signs:** `NotSupportedException` in shared interface; interface methods that do nothing or return null/empty for one provider; mock tests that don't reflect real provider behavior
 
 ---
 
-### Pitfall 3: Incomplete Email Parsing (HTML/UTF-8/Attachments)
+### Pitfall 3: DI Container as Service Locator
 
-**What goes wrong:** Email body displayed as raw HTML, garbled UTF-8 characters, or missing attachments. Only simple ASCII plain-text emails work correctly.
+**What goes wrong:** Using a DI container where services call `container.get<Service>()` instead of receiving dependencies via constructor injection.
 
-**Why it happens:** Email is a 50-year-old format with insane edge cases. MIME multipart, Content-Transfer-Encoding, charset hell, and inline attachments are complex.
+**Why it happens:**
+- Manual constructor injection feels tedious with many dependencies
+- Service locator pattern is familiar from Angular, NestJS, or Spring backgrounds
+- Circular dependency resolution is "easier" with a container
+- Frameworks make this pattern seem standard
 
 **Consequences:**
-- Professional emails display as garbage
-- Attachments silently lost
-- Reply/forward breaks threading
-- International users see broken text
+- Hidden dependencies not visible in constructor signature
+- Harder to test: need to mock or set up the container
+- Violates Dependency Inversion Principle: high-level modules depend on the container
+- Dependency graph is opaque; hard to reason about what constructs what
+- Container initialization becomes hidden logic that must run before everything else
 
 **Prevention:**
-- Use a battle-tested email parsing library (not regex)
-- Handle `text/plain` and `text/html` with proper charset detection
-- Parse MIME multipart recursively
-- Extract attachments with correct MIME type and filename encoding
-- Test with real emails from various clients (Gmail web, Outlook, Apple Mail, Thunderbird)
+- Use pure constructor injection: `constructor(private emailService: EmailService) {}`
+- For CLI apps, a simple factory function is sufficient and more explicit:
+  ```typescript
+  function createListEmailsHandler(deps: AppDependencies): ListEmailsHandler {
+    return new ListEmailsHandler(deps.emailService, deps.configService, deps.logger);
+  }
 
-**Warning signs:**
-- `Content-Type` header is ignored in your parsing
-- No MIME multipart handling
-- Hardcoded `UTF-8` assumption
+  type AppDependencies = {
+    emailService: EmailService;
+    configService: ConfigService;
+    logger: Logger;
+  };
+  ```
+- If you need a container, use `tsyringe` (minimal, no reflection) and prefer constructor injection with container registration
 
-**Phase:** Email reading feature (Phase 3 or 4 likely)
+**Correct pattern:**
+```typescript
+class ListEmailsHandler {
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly outputFormatter: OutputFormatter,
+    private readonly logger: Logger
+  ) {}
+
+  async handle(args: ListEmailsArgs): Promise<void> {
+    this.logger.debug(`Listing emails in ${args.folder}`);
+    const emails = await this.emailService.list(args);
+    await this.outputFormatter.format(emails);
+  }
+}
+```
+
+**Warning signs:** `import { container } from '~/di/container'` inside service files; `this.container.resolve()` calls; `@injectable()` decorators throughout the codebase
 
 ---
 
-### Pitfall 4: OAuth2 Redirect URI Misconfiguration
+### Pitfall 4: Over-Engineering the Architecture
 
-**What goes wrong:** Authorization works in dev but fails in production because redirect URI is `http://localhost:3000/callback` and never updated to production URL.
+**What goes wrong:** Creating 15 layers, elaborate CQRS patterns, event buses, and use case classes for a CLI that lists inbox, reads email, and sends replies.
 
-**Why it happens:** Google's OAuth consent screen requires URI pre-registration. Developers forget to add production URIs, or test URIs get blocked.
+**Why it happens:**
+- "Enterprise" patterns feel like professional architecture
+- Tutorial culture teaches patterns in isolation without cost-benefit analysis
+- Fear of doing it wrong leads to gold-plating "to be safe"
+- Confusing "lines of code" with "complexity"
 
 **Consequences:**
-- Users cannot authenticate in production
-- "redirect_uri_mismatch" error with no clear fix for users
-- Broken auth blocks entire product
+- Simple operations require traversing 5 directories and 3 interfaces
+- New contributors spend more time understanding the architecture than the domain
+- Refactoring took so long motivation is lost before delivering user value
+- Architecture overhead exceeds value for a 2,500-line CLI
+- Changes that should take an hour take a day due to indirection
 
 **Prevention:**
-- Document required redirect URIs clearly:
-  - `http://localhost:3000/callback` (local dev)
-  - `https://yourdomain.com/auth/callback` (production)
-  - `urn:ietf:wg:oauth:2.0:oob` (headless/cli alternative)
-- Use OOB flow (`urn:ietf:wg:oauth:2.0:oob`) for pure CLI tools to avoid web server requirement
-- Store OAuth state in filesystem, not memory, for CLI flow
+- Clean Architecture for CLI can be 3 layers: Commands/Handlers (application), Domain (entities/services), Infrastructure (API clients, storage)
+- Start with 2 layers: Application + Infrastructure. Promote to 3 only when domain logic grows complex
+- If a pattern adds indirection without clear benefit, don't use it
+- CLI apps have linear flow (parse args -> fetch data -> output); they are not web APIs with multiple clients, HTTP concerns, or event-driven workflows
+- Use the "n+1 rule": if you'll only ever have one implementation, don't create an interface yet
 
-**Warning signs:**
-- No OOB fallback for headless auth
-- Redirect URI not documented in setup instructions
-- Only `localhost` URI registered in Google Cloud Console
+**Appropriate structure for mail-cli:**
+```
+src/
+  commands/           # Commander command definitions + handlers (thin, framework)
+  domain/             # Entities, value objects, domain services (pure business logic)
+  infrastructure/     # GmailClient, GraphClient, FileTokenStore, OAuthHandler
+  application/        # Use cases / handlers that orchestrate domain + infra
+  di/                 # Dependency wiring (minimal, explicit factory functions)
+```
 
-**Phase:** Auth implementation (Phase 2 likely)
+**Warning signs:** `*UseCase` suffix on every function; interfaces used only once; 10+ files in an `interfaces/` directory; an `events/` directory for a CLI with no event-driven workflows
 
 ---
 
-### Pitfall 5: Threading Header Mismanagement (References/In-Reply-To)
+### Pitfall 5: Preserving Existing Code Smells in New Structure
 
-**What goes wrong:** Replies appear as new threads, or sent messages don't thread correctly in Gmail/Outlook. In-Reply-To and References headers are set incorrectly.
+**What goes wrong:** Refactoring only moves files to new directories but keeps god classes, magic numbers, and tight coupling in place.
 
-**Why it happens:** Email threading is subtle. Gmail uses both headers plus Subject line. Wrong header = broken conversation view.
+**Why it happens:**
+- Refactoring is scoped as "moving code" not "improving code"
+- Fear of breaking working functionality leads to conservatism
+- Time pressure to "finish" the refactor quickly
+- "We can clean this up later" never happens
 
 **Consequences:**
-- Replies appear as new conversations
-- Users lose context
-- Email chains split across multiple threads
-- "Re:" Subject line manipulation doesn't save bad headers
+- Same bugs, new location
+- Technical debt relocated, not reduced
+- Team believes refactoring is done but quality problems persist
+- Tests still can't isolate business logic because the coupling remains
 
 **Prevention:**
-- Always set `In-Reply-To` to the original Message-ID
-- Always set `References` to original References + original Message-ID (max 998 bytes per RFC 5322)
-- Preserve Subject line with "Re: " prefix (don't add if already present)
-- Store Message-ID from received emails to enable correct reply threading
+- Define "done" criteria for refactor:
+  - No class over 300 lines
+  - No function over 50 lines
+  - No magic numbers (use named constants)
+  - All business logic callable without instantiating infrastructure
+- Set a rule: if you touch a file during refactor, fix at least one thing in it
+- Add tests for behavior, not just coverage percentage
+- Create a quality checklist and gate PRs on it:
+  - [ ] No `any` types without justification
+  - [ ] All domain classes have unit tests
+  - [ ] No utility functions that hide business logic
+  - [ ] Dependency direction follows architecture (infra -> domain is OK; domain -> infra is not)
 
-**Warning signs:**
-- New messages don't appear under the correct thread in Gmail
-- Sent messages create new conversations
-- No Message-ID storage from fetched emails
-
-**Phase:** Compose/Reply feature (Phase 4 likely)
+**Warning signs:** Files moved verbatim from `src/` to `src/domain/`; no new tests written during refactor; same class names with same methods that are 400+ lines
 
 ---
 
 ## Moderate Pitfalls
 
-Issues that cause confusion, moderate bugs, or degraded UX.
+Issues that cause test brittleness, maintenance burden, or degraded CLI performance.
 
-### Pitfall 6: Gmail Search Syntax Not Abstracted (Vendor Lock-in Commands)
+### Pitfall 6: Testing Infrastructure Instead of Domain
 
-**What goes wrong:** Commands like `mail-cli search "has:attachment is:unread"` work for Gmail but are meaningless for Outlook. Users cannot write portable scripts.
+**What goes wrong:** Writing integration tests that hit the real Gmail API, or mocking everything including domain logic and ending up with mock tests that don't verify real behavior.
 
-**Why it happens:** Gmail search syntax is powerful and well-documented. Outlook Graph API uses OData filters (`filter=isRead eq false`). Developers use Gmail syntax as default.
+**Why it happens:**
+- Domain logic wasn't properly extracted, so tests can only test at integration level
+- "Unit tests need mocks" is taken to mean "mock everything, including business rules"
+- CI environment has Gmail credentials, so "why not use them?"
+- Testing philosophy is unclear, leading to a mix of slow integration tests and meaningless mock tests
 
 **Consequences:**
-- Scripts break when switching providers
-- Agents must know provider-specific syntax
-- Cannot offer "same commands, any provider" promise
+- Tests are slow, flaky, and require credentials
+- Mock-heavy tests break whenever implementation details change
+- Refactoring breaks tests even when behavior is preserved
+- The refactoring goal of "testability" is not achieved
 
 **Prevention:**
-- Implement a query abstraction layer that translates to provider-native syntax
-- Document that raw search strings use provider syntax
-- Provide high-level filter flags (`--attachment`, `--unread`, `--from`, `--to`, `--date-after`) that work universally
-- Let advanced users opt into raw provider syntax with `--provider-syntax`
+- Push logic into domain entities with no external dependencies (no API calls, no file I/O)
+- Test domain logic in true unit tests with zero mocks:
+  ```typescript
+  test('Email.isUnread returns true when read flag is false', () => {
+    const email = new EmailBuilder().withRead(false).build();
+    expect(email.isUnread()).toBe(true);
+  });
+  ```
+- Use integration tests sparingly, only for true infrastructure (token storage, OAuth flow, API batching)
+- Mock only at the boundary: `GmailClient`, `TokenStore`, `ConfigLoader`
+- An integration test is acceptable; a test that mocks domain objects is not testing domain logic
 
-**Warning signs:**
-- `search` command only accepts raw Gmail syntax
-- No `--from`, `--to`, `--since` flags that abstract provider
-- Graph API `$filter` never mentioned
-
-**Phase:** Search feature (Phase 3 likely)
+**Warning signs:** Mocks in unit test files; `new GmailClient()` in unit tests; `@ts-ignore` used to skip type errors in tests; test file larger than the source file it's testing
 
 ---
 
-### Pitfall 7: Missing Pagination Handling
+### Pitfall 7: Forgetting CLI UX Constraints During Refactor
 
-**What goes wrong:** Inbox lists only 10-25 emails even when user has thousands. Bulk operations process only first page.
+**What goes wrong:** Architecture changes introduce startup latency, memory overhead, or break the stable JSON output contract.
 
-**Why it happens:** APIs return paginated results by default. Developers test with small mailboxes and miss pagination entirely.
+**Why it happens:**
+- DI containers can add bootstrap time
+- Lazy loading patterns add complexity for marginal benefit
+- "Improving" the output format for consistency breaks existing scripts
+- Error handling changes add new failure modes users don't expect
 
 **Consequences:**
-- Users think their email is missing
-- Bulk operations incomplete
-- "Last email" is actually email #25
+- `mail-cli list --folder INBOX` takes 800ms instead of 50ms
+- Existing scripts that parse JSON output break
+- Error messages change format, breaking error-handling scripts
+- Memory usage spikes from container and instantiation overhead
 
 **Prevention:**
-- Always handle `nextPageToken` (Gmail) or `@odata.nextLink` (Graph)
-- Add `--limit` flag so users control scope
-- Default to reasonable limit (50) but document how to get more
-- Warn when results are truncated
+- Measure startup time before refactor; set a 200ms ceiling; verify after each PR
+- Use eager registration for commonly used services (not lazy)
+- Treat the JSON output schema as an immutable contract:
+  - Test the output schema explicitly
+  - Any schema change is a breaking change requiring major version bump
+- Keep error response envelope stable: `{"ok": false, "error": "...", "code": "..."}`
+- CLI apps benefit from simple, synchronous initialization where possible
 
-**Warning signs:**
-- No page token handling in list code
-- Hardcoded `maxResults=25` or similar
-- No way for user to get "next page"
-
-**Phase:** All list operations (Phase 3 likely)
+**Warning signs:** `console.time` appearing in new code but no before/after metrics; output format changes "for consistency"; new runtime overhead from patterns imported from web frameworks
 
 ---
 
-### Pitfall 8: Not Handling Message ID Collisions Across Providers
+### Pitfall 8: Circular Dependencies After Layer Extraction
 
-**What goes wrong:** A message gets ID "ABC123" from Gmail and ID "XYZ789" from Graph. If user adds both accounts, ID collisions cause wrong email display.
+**What goes wrong:** `domain/Email.ts` imports `application/EmailService.ts`, which imports `domain/Email.ts`. The codebase fails to build or has mysterious import order issues.
 
-**Why it happens:** Each provider uses its own ID format and namespace. No collision prevention.
+**Why it happens:**
+- Domain services reference application use cases that call them
+- Entity has a repository interface defined in domain; repository implementation is in infrastructure
+- TypeScript path aliases (`~/domain`) hide the actual import graph
+- "Helper" utilities in domain depend on application services
 
 **Consequences:**
-- Wrong email shown when switching between accounts
-- Thread linking breaks across providers
-- Attachment retrieval fails for wrong account
+- Build failures or runtime errors that are hard to trace
+- Cannot extract domain as a standalone package
+- Dependency graph becomes a spider web
+- Hard to reason about what depends on what
 
 **Prevention:**
-- Namespace IDs by provider: `gmail:ABC123`, `outlook:XYZ789`
-- Use composite keys in any local storage
-- When displaying IDs to users, show provider prefix
-- Document this in schema if any data is persisted
+- Domain layer should have zero imports from other project layers
+- Use case depends on domain; infrastructure depends on domain (via interfaces defined in domain)
+- Define repository interfaces in domain; implement in infrastructure
+- Follow the Dependency Rule strictly: outer layers can reference inner layers, never the reverse
+- Run `depcruise` or `madge` to visualize import graph; fail CI on new cycles
 
-**Phase:** Account management (Phase 2 likely)
+**Detection:**
+```bash
+# Use madge to detect circular dependencies
+npx madge --circular src/**/*.ts
+```
+
+**Warning signs:** `// TODO: fix circular import` comments; imports inside `import()` dynamic calls to avoid static analysis; class references passed as strings for lazy resolution
 
 ---
 
-### Pitfall 9: Missing Content-Disposition Handling for Attachments
+### Pitfall 9: Error Handling Architecture as an Afterthought
 
-**What goes wrong:** Attachments download with wrong filenames (e.g., "attachment.bin" or "part1.2") or wrong MIME types.
+**What goes wrong:** Errors bubble up as raw `Error` objects from infrastructure, API error codes become generic "Request failed" messages, and error types are inconsistent between commands.
 
-**Why it happens:** `Content-Disposition: inline` vs `attachment`, and filename encoding (RFC 2231/5987) are often ignored.
+**Why it happens:**
+- Error handling is added at the end, not during architecture design
+- Infrastructure errors (network timeout, API 500) are not distinguished from business errors (invalid email address, folder not found)
+- Each command handler creates its own error handling
 
 **Consequences:**
-- Users cannot find their downloads
-- Files open in browser instead of downloading
-- Wrong file associations
+- Scripts cannot programmatically handle specific error types
+- Error codes are inconsistent: `--help` returns exit code 0 in some commands, 1 in others
+- "Internal error" messages hide the actual problem from users who need to debug
 
 **Prevention:**
-- Respect `Content-Disposition: attachment; filename="..."`
-- Decode RFC 2231/5987 encoded filenames
-- Fall back to MIME part filename if no Content-Disposition
-- Sanitize filenames for filesystem safety
+- Create domain-specific error types hierarchy:
+  ```typescript
+  // Domain errors (business logic)
+  class EmailNotFoundError extends DomainError {}
+  class InvalidRecipientError extends DomainError {}
+  class DraftExpiredError extends DomainError {}
 
-**Phase:** Attachment handling (Phase 4 likely)
+  // Infrastructure errors (mapped at boundary)
+  class NetworkError extends InfrastructureError {}
+  class RateLimitError extends InfrastructureError { retryAfter?: number; }
+  class AuthenticationError extends InfrastructureError {}
+  ```
+- Map infrastructure errors to domain errors at the API client boundary
+- Centralize error handling at CLI entry point with consistent exit codes:
+  - 0: success
+  - 1: usage/argument error
+  - 2: server/network error (retryable)
+  - 3: authentication error (re-authenticate)
+- Use error codes in JSON output: `{"ok": false, "error": "...", "code": "RATE_LIMITED", "retryAfter": 60}`
 
 ---
 
-### Pitfall 10: No Timeout or Hang Protection
+### Pitfall 10: Command Handler God Objects
 
-**What goes wrong:** Commands hang forever when network is down, API is slow, or server is unresponsive. Users must Ctrl+C.
+**What goes wrong:** A single `ListEmailsHandler` handles `--folder`, `--account`, `--limit`, `--format`, `--search`, `--sort`, and 10 more flags. The handler becomes a 400-line switch statement.
 
-**Why it happens:** Default HTTP client timeouts are often disabled or too long. Network errors not handled gracefully.
+**Why it happens:**
+- All flags go to one handler because it "lists emails"
+- Parameter parsing logic mixes with business logic
+- No clear separation between "parse arguments" and "execute query"
 
 **Consequences:**
-- Scripted workflows stall indefinitely
-- Users assume tool is broken
-- Resource exhaustion from many hanging connections
+- Hard to test individual flag combinations
+- Adding a new flag requires understanding the entire handler
+- Business logic is buried in argument handling code
 
 **Prevention:**
-- Set reasonable timeouts: 10s for single operations, 60s for bulk
-- Implement per-request timeouts, not global timeouts
-- Add `--timeout` flag for user control
-- Provide `--poll-interval` for long-running operations
-- Handle network errors with clear messages, not raw stack traces
-
-**Phase:** HTTP client / error handling (Phase 2 or 3)
+- Use a command dispatch pattern:
+  ```typescript
+  // Parse first, validate second, execute third
+  const parsed = parseListEmailsArgs(args);        // Pure parsing, returns typed args or validation errors
+  const validated = validateListEmailsArgs(parsed); // Business validation
+  const result = await listEmailsHandler.execute(validated); // Only business logic
+  ```
+- Separate argument parsing (can be integration tested with example data) from business logic (unit testable)
+- Consider if `handler` is actually a use case; if it just calls a service, it may not need to exist
 
 ---
 
@@ -271,85 +425,25 @@ Issues that cause confusion, moderate bugs, or degraded UX.
 
 Issues that cause friction but are recoverable.
 
-### Pitfall 11: JSON Output Without Error Channel
+### Pitfall 11: Decorator Overuse for DI
 
-**What goes wrong:** Successful commands return JSON, but errors return human-readable text to stderr. Parsing scripts cannot distinguish success from failure cleanly.
-
-**Why it happens:** Developers output errors as human messages without thinking about machine parsing.
-
-**Consequences:**
-- Scripts cannot detect failures from output alone
-- `mail-cli list | jq .` fails on error but jq doesn't know why
-- Exit codes sometimes wrong
+**What goes wrong:** Using `@injectable()`, `@inject()`, `@singleton()` decorators throughout the codebase, which requires `reflect-metadata` and makes the code tightly coupled to a DI framework.
 
 **Prevention:**
-- Always output errors as JSON to stdout: `{"error": "...", "code": "RATE_LIMITED"}`
-- Use exit codes consistently: 0 success, 1 usage error, 2 server error, 3 auth error
-- Consider `{"ok": true, "data": [...]}` vs `{"ok": false, "error": "..."}` envelope pattern
-
-**Phase:** Output/CLI interface (Phase 1 or 2)
+- Prefer explicit constructor injection over decorators
+- If decorators are used (e.g., for singletons), keep them minimal and isolated to infrastructure registration
+- Avoid `reflect-metadata` if possible; it adds startup overhead and can cause tree-shaking issues
 
 ---
 
-### Pitfall 12: Startup Time Neglect (The Bun Check)
+### Pitfall 12: Abstractions That Mirror Implementation
 
-**What goes wrong:** Tool takes 800ms+ to start because of unnecessary imports, synchronous file reads, or heavy initialization. Users expect sub-200ms.
-
-**Why it happens:** Bun's startup is fast, but developers import heavy modules or do synchronous I/O at startup anyway.
-
-**Consequences:**
-- Not "fast" anymore
-- Breaks scripts expecting snappy output
-- Annoying for daily driver use
+**What goes wrong:** Repository interface is `interface EmailRepository { getById(id: string): Promise<Email> }` and the implementation is identical. The abstraction adds indirection without isolating change.
 
 **Prevention:**
-- Lazy-load non-critical modules
-- Async initialization where possible
-- Profile startup: `bun build --profile` or `time bun index.ts`
-- Target <100ms cold start, <20ms warm (if caching auth)
-
-**Phase:** Performance optimization (Phase N, after MVP)
-
----
-
-### Pitfall 13: Large Attachment Download in Memory
-
-**What goes wrong:** 50MB attachment loads entirely into RAM before writing to disk, causing memory bloat or OOM on large files.
-
-**Why it happens:** Simple `response.arrayBuffer()` followed by `writeFile` loads everything first.
-
-**Consequences:**
-- Memory exhaustion on large files
-- Slow feedback (no progress until complete)
-- Cannot handle multi-GB files
-
-**Prevention:**
-- Stream attachments: fetch body as ReadableStream, pipe to file
-- Show download progress for files >1MB
-- Support `--output-dir` for attachment saves
-- Set reasonable max attachment size warning (e.g., >25MB)
-
-**Phase:** Attachment handling (Phase 4 likely)
-
----
-
-### Pitfall 14: Ignoring Email Security Headers (DMARC/DKIM/SPF Context)
-
-**What goes wrong:** Tool displays emails identically regardless of authentication status. Users cannot see if an email is actually from who it claims.
-
-**Why it happens:** DMARC/DKIM/SPF validation is complex. Most tools just show "From:" header without verification status.
-
-**Consequences:**
-- Phishing emails appear legitimate
-- Users cannot distinguish forged from genuine
-- Security-conscious users distrust the tool
-
-**Prevention:**
-- At minimum, surface authentication results if provided by API (Gmail provides `GNIP` or security details)
-- Consider showing a warning badge for unauthenticated emails
-- Document what authentication signals the tool shows (and doesn't show)
-
-**Phase:** Email display (Phase 3 or 4)
+- abstractions should capture *essential* complexity, not duplicate implementation
+- If you're writing `implements IEmailRepository` and the method body is the same as without the interface, remove the interface
+- The abstraction should exist to allow swapping implementations (e.g., real API vs. mock), not just to follow a pattern
 
 ---
 
@@ -357,37 +451,48 @@ Issues that cause friction but are recoverable.
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|----------------|------------|
-| OAuth2 / Auth | Pitfall 1 (token storage), Pitfall 4 (redirect URI) | Keychain storage, OOB fallback, documented URIs |
-| API Integration | Pitfall 2 (rate limits), Pitfall 7 (pagination) | Exponential backoff, page token handling |
-| Search | Pitfall 6 (Gmail-only syntax) | Query abstraction layer from day one |
-| Email Display | Pitfall 3 (parsing), Pitfall 14 (security headers) | Battle-tested parser, authentication surfacing |
-| Attachments | Pitfall 9 (filename), Pitfall 13 (streaming) | RFC 2231 decode, streaming downloads |
-| Compose/Reply | Pitfall 5 (threading headers) | In-Reply-To/References as first-class concern |
-| Output/CLI | Pitfall 11 (error channel) | JSON error envelope from day one |
-| Performance | Pitfall 12 (startup time) | Lazy loading, profiling, <100ms target |
+| Folder restructuring | Pitfall 5 (preserving bad patterns) | Quality gates: max file length, no god classes, named constants |
+| Domain extraction | Pitfall 1 (anemic domain), Pitfall 8 (circular deps) | Domain-first: entities before services; domain has zero imports from other layers |
+| Dependency injection | Pitfall 3 (DI as service locator), Pitfall 11 (decorator overuse) | Constructor injection, simple factory, no reflect-metadata |
+| Provider abstraction | Pitfall 2 (premature/lopsided abstraction) | Implement Gmail fully before abstracting; abstract only what's genuinely common |
+| Unit testing | Pitfall 6 (testing infra not domain) | Test domain with zero mocks; mock only at boundary |
+| Output format | Pitfall 7 (breaking JSON schema) | Treat output as immutable contract; test schema explicitly |
+| Error handling | Pitfall 9 (errors as afterthought) | Domain error types from day one; centralized at entry point |
+| Command handlers | Pitfall 10 (handler God objects) | Parse-then-validate-then-execute pattern |
+
+---
+
+## Research Notes
+
+**Confidence: MEDIUM** — WebSearch was unavailable during research session. Findings are based on established software design principles from Clean Architecture literature (Robert C. Martin), SOLID principles, and experience reports. Not verified against live community sources.
+
+**Gaps:**
+- Current community discussions on TypeScript DI patterns (2025-2026)
+- Specific Bun-native patterns for dependency injection (if different from Node)
+- mail-cli codebase state (not read during research; should be consulted before phase planning)
 
 ---
 
 ## Sources
 
-> **Confidence: LOW** — Not verified via live search. Based on training data up to early 2025.
+> **Confidence: LOW** — Not verified via live search due to tool unavailability.
 
-- Gmail API Quotas: https://developers.google.com/gmail/api/reference/quota (verify current limits)
-- Gmail API Best Practices: https://developers.google.com/gmail/api/guides/bestbuy (verify current recommendations)
-- Microsoft Graph Throttling: https://learn.microsoft.com/en-us/graph/throttling (verify current limits)
-- RFC 5322 (Email format): https://datatracker.ietf.org/doc/html/rfc5322
-- RFC 2231 (MIME parameter encoding): https://datatracker.ietf.org/doc/html/rfc2231
-- OAuth 2.0 for CLI: https://developers.google.com/identity/protocols/oauth2#installed (verify OOB still supported)
-- Email threading: https://www.jwz.org/doc/threading.html
+Would verify against (if accessible):
+- Robert C. Martin, "Clean Architecture" (foundational text)
+- Khalil Stemmler, "Clean Architecture in Node.js" (TypeScript-focused)
+- Dev.to posts on Clean Architecture pitfalls
+- GitHub discussions on DI patterns in TypeScript CLI tools
+- Actual mail-cli codebase inspection
 
 ---
 
 ## Verification Checklist
 
-Before treating this document as authoritative, verify:
+Before treating this document as authoritative for mail-cli specifically, verify against codebase:
 
-- [ ] Gmail API rate limits with current documentation
-- [ ] Microsoft Graph throttling limits with current documentation
-- [ ] OOB OAuth flow still supported by Google
-- [ ] Modern email parsing libraries available for Bun/TypeScript
-- [ ] Keychain storage API availability in Bun
+- [ ] Current file/folder structure of mail-cli (to understand what "restructuring" means)
+- [ ] Current class/method sizes (to identify existing god classes)
+- [ ] Current test coverage (to establish baseline)
+- [ ] Current error handling patterns (to ensure consistency)
+- [ ] Current output format (to avoid breaking it)
+- [ ] Startup time baseline (to measure refactor impact)

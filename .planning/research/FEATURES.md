@@ -1,187 +1,662 @@
-# Feature Research
+# Feature Research: Architecture Refactor
 
-**Domain:** CLI Email Client
-**Researched:** 2026-04-04
-**Confidence:** MEDIUM (WebSearch/WebFetch unavailable; based on training data and domain knowledge of CLI email ecosystem)
+**Domain:** mail-cli v1.1 Architecture Refactor
+**Researched:** 2026-04-05
+**Confidence:** MEDIUM-HIGH
+**Focus:** Testing, Dependency Injection, Clean Architecture patterns for CLI refactor
 
-## Feature Landscape
+## Executive Summary
 
-### Table Stakes (Users Expect These)
+This refactor is NOT about adding email features -- it is about restructuring the existing codebase for maintainability, modularity, and testability. The target features are architectural patterns: testing infrastructure, dependency injection, and Clean Architecture layer separation. Existing CLI behavior must remain unchanged.
 
-Features users assume exist in any CLI email tool. Missing these = product feels broken or unusable.
+## Feature Categories for Refactor
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| **Read email (headers + body)** | Core use case — users must see message content | LOW | Plain text display, terminal-safe rendering of HTML if needed |
-| **List emails (inbox/folder)** | Core use case — users need to browse messages | LOW | Pagination, show sender/subject/date/snippet |
-| **Send email (compose)** | Core use case — composing new messages | LOW | `--to`, `--subject`, `--body` flags, `--body-file-path` for longer content |
-| **Search emails** | Daily workflow — finding specific messages | MEDIUM | Server-side search via Gmail/Outlook APIs; syntax differs by provider |
-| **Attachments: list** | Business emails often have attachments | LOW | Show filename/size on read |
-| **Attachments: send** | Business use case — sending files | MEDIUM | `--attach` flag, MIME handling |
-| **Authentication (OAuth2)** | Secure access to email provider | MEDIUM | Gmail and Microsoft Graph both require OAuth2; browser-based flow |
-| **JSON output** | Machine-readable results for scripting/agents | LOW | Structured arrays, consistent schema per command |
+### 1. Testing Infrastructure
 
-### Differentiators (Competitive Advantage)
+#### 1.1 Test Runner (bun:test)
 
-Features that set the product apart. Not required, but valuable — especially for the agent-first positioning.
+| Feature | Description | Complexity | Notes |
+|---------|-------------|------------|-------|
+| `bun:test` | Built-in Jest-compatible test runner | LOW | Already available via `@types/bun`. Use `import { test, expect, mock, spyOn } from 'bun:test'` |
+| Coverage reporting | `--coverage` flag with text/lcov output | LOW | Configure via bunfig.toml |
+| JUnit XML output | `--reporter=junit --reporter-outfile` for CI | LOW | GitLab, Jenkins compatibility |
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Reply to thread** | Full conversation context without copy-paste | LOW | Sets References/In-Reply-To headers correctly; body empty |
-| **Thread awareness** | Conversation view, grouping by subject | LOW | Leverage Gmail/Outlook thread IDs |
-| **Move to folder/label** | Email organization | LOW | Provider-native folder names (e.g., "INBOX", "[Gmail]/Sent") |
-| **Mark read/unread** | Email management | LOW | Status toggle |
-| **Delete/trash** | Email management | LOW | Soft delete via API |
-| **Batch operations** | Efficiency — process multiple emails at once | MEDIUM | e.g., `mail-cli move --ids 1,2,3 --folder work` |
-| **Account management** | Multi-account support | MEDIUM | `mail-cli account add/remove/list` |
-| **Folder/list labels** | Navigation for Gmail-style label systems | LOW | `mail-cli folders` / `mail-cli labels` |
-| **Filter/query builder** | Complex search expressions | MEDIUM | Abstraction over Gmail search syntax vs Outlook filters |
-| **Structured error output** | Debugging failed calls | LOW | Machine-readable errors, not just exit codes |
+**bun:test API (relevant for CLI testing):**
 
-### Anti-Features (Commonly Requested, Often Problematic)
+| API | Usage | Example |
+|-----|-------|---------|
+| `mock(fn)` | Create mock function | `const fn = mock(() => 42)` |
+| `jest.fn()` | Jest-compatible alternative | `const fn = jest.fn(() => 42)` |
+| `mock.mockResolvedValue(v)` | Async mock resolve | `fn.mockResolvedValue({ id: '1' })` |
+| `mock.mockRejectedValue(e)` | Async mock reject | `fn.mockRejectedValue(new Error('fail'))` |
+| `spyOn(obj, 'method')` | Spy without replacing | `spyOn(console, 'log')` |
+| `mock.module(path, fn)` | Module-level mock | `mock.module('./provider', () => ({ ... }))` |
+| `mock.restore()` | Restore mocked implementation | `fn.mock.restore()` |
+| `mock.clearAllMocks()` | Reset call history | Clears `.calls`, `.results` |
 
-Features that seem good but create problems for this project's constraints.
+**CLI-specific test patterns:**
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| **Interactive TUI** | "Email client needs to be interactive" | Project explicitly non-interactive; agents and scripts don't use TTY prompts | Keep flag-based commands only |
-| **Offline mode / local cache** | "Work without internet" | Complexity explosion: sync logic, conflict resolution, storage | Online-only V1 as stated |
-| **Local search index** | "Search faster without server" | Weights project down; adds SQLite dependency; server search is good enough | Server-side search only |
-| **IMAP support** | "Use with any email provider" | IMAP is stateful, complex, session-based; Gmail/Graph APIs are cleaner for V1 | Gmail API / Microsoft Graph only |
-| **Unified folder abstraction** | "Don't want to learn Gmail vs Outlook differences" | Abstraction leaks (different semantics); users who care about email understand their provider | Provider-native folder names directly |
-| **Auto-quoted replies** | "Reply should include original text" | quoting logic is complex, often unwanted; diffs become noisy | Headers-only replies (References/In-Reply-To), body left to user |
-| **HTML rendering in terminal** | "See formatted email" | Terminal HTML rendering is messy, security concerns | Plain text fallback; raw HTML option |
+```typescript
+// Test file: src/application/email/list-emails.usecase.test.ts
+import { test, expect, mock } from 'bun:test';
+import { ListEmailsUseCase } from './list-emails.usecase';
 
-## Feature Dependencies
+// Factory pattern for dependency injection
+function createMockEmailProvider() {
+  return {
+    list: mock(async () => ({
+      emails: [
+        { id: '1', from: 'a@b.com', subject: 'Test', date: '2026-01-01', to: [] },
+      ],
+    })),
+  };
+}
 
-```
-[OAuth2 Authentication]
-    └──required by──> [All email operations]
+test('ListEmailsUseCase returns email list', async () => {
+  const mockProvider = createMockEmailProvider();
+  const useCase = new ListEmailsUseCase(() => mockProvider);
 
-[Read email]
-    └──enhanced by──> [Attachments list]
+  const result = await useCase.execute({ folder: 'INBOX', limit: 20 });
 
-[List emails]
-    └──enhanced by──> [Search]
-    └──enhanced by──> [Folders/Labels]
-
-[Send email]
-    └──enhanced by──> [Attachments send]
-
-[Reply to thread]
-    └──requires──> [Send email]
-
-[Move to folder]
-    └──requires──> [Folders/Labels]
-
-[Mark read/unread]
-    └──requires──> [List emails]
-
-[Delete/trash]
-    └──requires──> [List emails]
+  expect(result.emails).toHaveLength(1);
+  expect(mockProvider.list).toHaveBeenCalledWith('INBOX', 20);
+});
 ```
 
-### Dependency Notes
+#### 1.2 CLI Command Testing Patterns
 
-- **OAuth2 is foundational**: No email operations work without successful authentication.
-- **Reply requires Send**: Reply is implemented as send with threading headers.
-- **Batch operations enhance basic operations**: `mail-cli move --ids 1,2,3` is a loop over single-move, not a separate code path.
-- **Search enhances List**: Both operate on the same mailbox; search just filters server-side.
+| Pattern | Description | Complexity | Notes |
+|---------|-------------|------------|-------|
+| Integration test | Test full command execution | MEDIUM | Parse args, execute, verify output |
+| Unit test | Test use case in isolation | LOW | Mock provider ports |
+| Output capture | Verify JSON output format | LOW | Use `bun:test` with subprocess |
 
-## MVP Definition
+**Testing command handlers (thin wrapper pattern):**
 
-### Launch With (v1)
+```typescript
+// Test file: src/presentation/commands/list-command.test.ts
+import { test, expect, mock } from 'bun:test';
+import { executeListCommand } from './list-command';
 
-Minimum viable product — what's needed to validate the concept for agent/script use.
+// Mock the use case
+mock.module('../application/email/list-emails.usecase', () => ({
+  ListEmailsUseCase: class {
+    execute = mock(async () => ({ emails: [], nextPageToken: undefined }));
+  },
+}));
 
-- [ ] **OAuth2 authentication** — Must authenticate to do anything; `mail-cli auth login`
-- [ ] **List emails** — `mail-cli list --folder INBOX`; pagination, JSON array output
-- [ ] **Read email** — `mail-cli read --id <id>`; headers, body, attachment list
-- [ ] **Send email** — `mail-cli send --to <addr> --subject <sub> --body <text>`; compose and dispatch
-- [ ] **Reply to thread** — `mail-cli reply --id <id> --body <text>`; threading headers set
-- [ ] **Search** — `mail-cli search --query <expr>`; server-side, provider-native syntax
-- [ ] **JSON output schema** — Consistent, parseable, typed response structure
+test('list command outputs JSON', async () => {
+  // Capture console.log output
+  const logs: string[] = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
 
-### Add After Validation (v1.x)
+  try {
+    await executeListCommand({ folder: 'INBOX', limit: 10 });
+    const output = JSON.parse(logs[0]);
+    expect(output).toHaveProperty('emails');
+  } finally {
+    console.log = originalLog;
+  }
+});
+```
 
-Features to add once core is working and user feedback guides prioritization.
+#### 1.3 Test File Organization
 
-- [ ] **Account management** — Multi-account add/remove/list; `mail-cli account add`
-- [ ] **Folder/label navigation** — `mail-cli folders` / `mail-cli labels`
-- [ ] **Mark read/unread** — `mail-cli mark --id <id> --read/--unread`
-- [ ] **Delete/trash** — `mail-cli delete --id <id>`
-- [ ] **Move to folder** — `mail-cli move --id <id> --folder <name>`
-- [ ] **Attachments send** — `--attach <filepath>` on send command
-- [ ] **Batch operations** — `--ids 1,2,3` style for bulk actions
+```
+src/
+├── application/
+│   ├── email/
+│   │   ├── list-emails.usecase.ts
+│   │   └── list-emails.usecase.test.ts   # Co-located tests
+│   └── dto/
+│       └── email.dto.ts
+│
+├── infrastructure/
+│   ├── providers/
+│   │   ├── gmail-provider.ts
+│   │   └── gmail-provider.test.ts         # Integration tests (real API or fixtures)
+│   │
+│   └── storage/
+│       └── json-file-token-storage.ts
+│
+└── presentation/
+    └── commands/
+        ├── list-command.ts
+        └── list-command.test.ts
+```
 
-### Future Consideration (v2+)
+**Test naming conventions:**
+- `*.test.ts` for unit/integration tests
+- `*.test-d.ts` for type testing (if using `expectTypeOf`)
+- Pattern: co-locate test with source (`list-emails.usecase.ts` + `list-emails.usecase.test.ts`)
 
-Features to defer until product-market fit is established.
+#### 1.4 bunfig.toml Configuration
 
-- [ ] **Attachment download** — Fetch attachment content (requires local storage decision)
-- [ ] **Email filtering/rule creation** — Server-side filter setup
-- [ ] **Webhook/polling for new email** — Event-driven notifications
-- [ ] **Draft management** — Save/edit drafts before sending
-- [ ] **Contacts integration** — Address autocomplete
+```toml
+[test]
+retry = 3              # Retry flaky tests
+timeout = 10000        # Per-test timeout in ms
+preload = ["./test/setup.ts"]  # Preload mocks before tests
 
-## Feature Prioritization Matrix
+[test.coverage]
+coverage = true
+coverageReporter = ["text", "lcov"]
+```
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| OAuth2 authentication | HIGH | MEDIUM | P1 |
-| List emails | HIGH | LOW | P1 |
-| Read email | HIGH | LOW | P1 |
-| Send email | HIGH | LOW | P1 |
-| Reply to thread | HIGH | LOW | P1 |
-| Search | HIGH | MEDIUM | P1 |
-| JSON output schema | HIGH | LOW | P1 |
-| Account management | MEDIUM | MEDIUM | P2 |
-| Folder/label navigation | MEDIUM | LOW | P2 |
-| Mark read/unread | MEDIUM | LOW | P2 |
-| Delete/trash | MEDIUM | LOW | P2 |
-| Move to folder | MEDIUM | LOW | P2 |
-| Attachments send | MEDIUM | MEDIUM | P2 |
-| Batch operations | MEDIUM | MEDIUM | P2 |
-| Attachments download | LOW | MEDIUM | P3 |
-| Webhook/polling | LOW | HIGH | P3 |
-| Draft management | LOW | MEDIUM | P3 |
-| Contacts integration | LOW | HIGH | P3 |
+---
 
-**Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
+### 2. Dependency Injection
 
-## Competitor Feature Analysis
+#### 2.1 DI Approaches Comparison
 
-| Feature | aerc (TUI) | neomutt (TUI) | This Project (non-interactive) |
-|---------|------------|---------------|--------------------------------|
-| Interactive TUI | YES | YES | NO (explicit anti-feature) |
-| Batch/script mode | Partial | YES (batch) | YES (first-class) |
-| JSON output | NO | NO | YES (core design) |
-| Gmail API | Via IMAP | Via IMAP | Native API |
-| OAuth2 | Via IMAP | Via IMAP | Native |
-| Agent-friendly | NO | NO | YES |
-| Offline/cache | YES | YES | NO (V1) |
-| Search | Via notmuch | Via notmuch | Native server-side |
+| Approach | Library | Complexity | Best For | Notes |
+|----------|---------|------------|----------|-------|
+| **Manual DI with factories** | None | LOW | CLI apps, simple graphs | Recommended for this project |
+| Constructor injection | None | LOW | All cases | Primary pattern |
+| TSyringe | `tsyringe` | MEDIUM | When container features needed | Requires `reflect-metadata` |
+| InversifyJS | `inversify` | HIGH | Complex DI graphs | Overkill for CLI |
 
-**Key insight:** Existing CLI email clients (aerc, neomutt) are TUI-first and optimize for interactive human use. They output human-formatted text, not JSON. They use IMAP, not native APIs. They all assume offline caching. None are designed for agents or script pipelines.
+**Recommendation: Manual DI with factory functions**
 
-This project fills a specific gap: non-interactive, API-native, JSON-first CLI tool optimized for automation and AI agent workflows.
+Rationale:
+- CLI apps have linear dependency graphs, not complex object graphs
+- No additional runtime dependencies
+- Explicit wiring is easier to debug
+- Constructor injection covers 90% of testability needs
+
+#### 2.2 Manual DI Pattern
+
+**Pattern: Constructor injection with factory**
+
+```typescript
+// Interface (port)
+export interface IEmailProviderPort {
+  list(folder: string, limit: number): Promise<{ emails: Email[]; nextPageToken?: string }>;
+  read(id: string): Promise<Email>;
+  send(dto: SendEmailDTO): Promise<string>;
+  // ...
+}
+
+// Implementation (infrastructure)
+export class GmailProvider implements IEmailProviderPort {
+  // ... existing implementation
+}
+
+// Factory function
+export function createGmailProvider(account: string, tokenStorage: ITokenStoragePort): IEmailProviderPort {
+  return new GmailProvider(account, tokenStorage);
+}
+
+// Use case (application layer)
+export class ListEmailsUseCase {
+  constructor(
+    private getProvider: (accountId: string) => IEmailProviderPort
+  ) {}
+
+  async execute(input: ListEmailsInput): Promise<EmailListDTO> {
+    const provider = this.getProvider(input.accountId);
+    const result = await provider.list(input.folder, input.limit);
+    return { emails: result.emails, nextPageToken: result.nextPageToken };
+  }
+}
+```
+
+**Usage:**
+
+```typescript
+// Production (wire in main.ts or container)
+const tokenStorage = new JsonFileTokenStorage();
+const container = new Container(tokenStorage);
+
+const listEmailsUseCase = new ListEmailsUseCase(
+  (accountId) => container.getProvider(accountId)
+);
+
+// Test (inject mocks)
+const mockProvider = createMockEmailProvider();
+const listEmailsUseCase = new ListEmailsUseCase(
+  () => mockProvider  // Always returns mock
+);
+```
+
+#### 2.3 DI Container (Optional -- Start Without)
+
+**If a container is needed later, build a simple one:**
+
+```typescript
+// src/infrastructure/di/container.ts
+export class Container {
+  private providers = new Map<string, IEmailProviderPort>();
+
+  constructor(
+    private tokenStorage: ITokenStoragePort,
+    private config: IConfigPort,
+  ) {}
+
+  getProvider(accountId: string): IEmailProviderPort {
+    if (!this.providers.has(accountId)) {
+      const account = this.parseAccountId(accountId);
+      if (account.provider === 'gmail') {
+        this.providers.set(accountId, new GmailProvider(account.email, this.tokenStorage));
+      } else {
+        this.providers.set(accountId, new OutlookProvider(account.email, this.tokenStorage));
+      }
+    }
+    return this.providers.get(accountId)!;
+  }
+
+  // Use case factories
+  createListEmailsUseCase(): ListEmailsUseCase {
+    return new ListEmailsUseCase((accountId) => this.getProvider(accountId));
+  }
+}
+```
+
+**Do NOT add this initially.** Start with direct factory functions. Add container only when:
+- Number of use cases grows beyond 10
+- Need for singleton scoping emerges
+- Provider caching becomes necessary
+
+#### 2.4 When NOT to Use DI
+
+| Scenario | Approach | Why |
+|----------|----------|-----|
+| Pure functions | No DI needed | No side effects, no dependencies |
+| Configuration only | Pass as constructor param | Simple enough to not need abstraction |
+| Single implementation | Direct instantiation | YAGNI until interface needed |
+
+---
+
+### 3. Clean Architecture Layers
+
+#### 3.1 Layer Definitions
+
+| Layer | Responsibility | Contents | Dependency Direction |
+|-------|---------------|----------|---------------------|
+| **Presentation** | CLI parsing, output formatting | Commander commands, option handlers, account resolver | Depends on Application |
+| **Application** | Business logic, orchestration, validation | Use cases, DTOs, input validators, ports (interfaces) | Depends on Infrastructure |
+| **Infrastructure** | External integrations | Providers (Gmail/Outlook), storage adapters, config, auth | No internal dependencies |
+| **Domain** | Types and errors | Email, Folder, Attachment types, AppError base | No dependencies |
+
+**Deliberate simplification for CLI:**
+- Domain entities (Email, Folder) live in Infrastructure, not a separate layer -- this is a data-mapping layer, not complex domain modeling
+- Use cases are thin orchestrators, not rich domain logic
+- This 3-layer (Presentation/Application/Infrastructure) model fits CLI complexity
+
+#### 3.2 Layer Boundaries
+
+```
+PRESENTATION LAYER (src/presentation/)
+    │
+    │  Depends on use case interfaces
+    ▼
+APPLICATION LAYER (src/application/)
+    │
+    │  Depends on port interfaces
+    ▼
+INFRASTRUCTURE LAYER (src/infrastructure/)
+    │
+    │  Implements port interfaces
+    ▼
+    External: Gmail API, Microsoft Graph API, filesystem
+```
+
+**Key rule:** Dependencies point inward. Inner layers know nothing about outer layers.
+
+#### 3.3 Port Interfaces (Application Layer)
+
+**Driven by (Infrastructure -> Application):**
+
+```typescript
+// src/application/ports/email-provider.port.ts
+export interface IEmailProviderPort {
+  readonly account: string;
+  readonly provider: 'gmail' | 'outlook';
+
+  list(folder: string, limit: number): Promise<{ emails: Email[]; nextPageToken?: string }>;
+  read(id: string): Promise<Email>;
+  readThread(threadId: string): Promise<Email[]>;
+  search(query: string, limit: number): Promise<Email[]>;
+  send(dto: SendEmailDTO): Promise<string>;
+  reply(id: string, dto: SendEmailDTO): Promise<string>;
+  mark(id: string, read: boolean): Promise<void>;
+  move(id: string, folder: string): Promise<void>;
+  delete(id: string): Promise<void>;
+  status(): Promise<{ unread: number; total: number }>;
+  listFolders(): Promise<Folder[]>;
+}
+
+// src/application/ports/token-storage.port.ts
+export interface ITokenStoragePort {
+  save(email: string, tokens: OAuthTokens): Promise<void>;
+  get(email: string): Promise<OAuthTokens | null>;
+  delete(email: string): Promise<void>;
+  list(): Promise<string[]>;
+}
+
+// src/application/ports/config.port.ts
+export interface IConfigPort {
+  load(): Promise<AppConfig>;
+}
+```
+
+**Driving (Application -> Presentation):**
+
+```typescript
+// src/application/ports/use-case-executor.port.ts
+export interface IOutputPort<T> {
+  success(data: T): void;
+  error(error: AppError): never;
+}
+
+export interface IUseCaseExecutor {
+  execute<TInput, TOutput>(
+    useCase: IUseCase<TInput, TOutput>,
+    input: TInput,
+    outputPort: IOutputPort<TOutput>
+  ): Promise<void>;
+}
+```
+
+#### 3.4 Use Case Structure
+
+```typescript
+// src/application/email/list-emails.usecase.ts
+
+// Input DTO
+export interface ListEmailsInput {
+  accountId: string;
+  folder: string;
+  limit: number;
+}
+
+// Output DTO
+export interface EmailListDTO {
+  emails: EmailSummaryDTO[];
+  nextPageToken?: string;
+}
+
+// Use case interface (port)
+export interface IListEmailsUseCase {
+  execute(input: ListEmailsInput): Promise<EmailListDTO>;
+}
+
+// Use case implementation
+export class ListEmailsUseCase implements IListEmailsUseCase {
+  constructor(
+    private getProvider: (accountId: string) => IEmailProviderPort
+  ) {}
+
+  async execute(input: ListEmailsInput): Promise<EmailListDTO> {
+    // Validation
+    if (input.limit < 1 || input.limit > 100) {
+      throw new AppError('INVALID_LIMIT', 'Limit must be between 1 and 100');
+    }
+
+    // Business logic
+    const result = await this.getProvider(input.accountId).list(input.folder, input.limit);
+
+    // Map to DTO
+    return {
+      emails: result.emails.map(email => ({
+        id: email.id,
+        from: email.from,
+        subject: email.subject,
+        date: email.date,
+        flags: email.flags,
+      })),
+      nextPageToken: result.nextPageToken,
+    };
+  }
+}
+```
+
+#### 3.5 Command Handler Pattern (Presentation)
+
+**Thin wrapper that delegates to use case:**
+
+```typescript
+// src/presentation/commands/list-command.ts
+import type { IListEmailsUseCase } from '../../application/email/list-emails.usecase';
+import type { ListEmailsInput } from '../../application/email/list-emails.usecase';
+
+export function createListCommandHandler(
+  listEmailsUseCase: IListEmailsUseCase,
+  resolveAccount: () => Promise<string>
+) {
+  return async function handleListCommand(options: {
+    account?: string;
+    folder: string;
+    limit: number;
+  }): Promise<void> {
+    const accountId = options.account ?? await resolveAccount();
+
+    const input: ListEmailsInput = {
+      accountId,
+      folder: options.folder,
+      limit: options.limit,
+    };
+
+    const result = await listEmailsUseCase.execute(input);
+    console.log(JSON.stringify(result));
+  };
+}
+```
+
+**Anti-pattern to avoid: Fat command handlers** -- do NOT put business logic in command handlers.
+
+#### 3.6 Batch Operation Base Class
+
+**Current problem:** mark/move/delete have duplicated error handling loops in cli.ts.
+
+**Solution:** Extract base class in application layer:
+
+```typescript
+// src/application/email/batch.usecase.ts
+export abstract class BatchUseCase<TInput, TItem> {
+  abstract getItemIds(input: TInput): string[];
+  abstract executeItem(itemId: string): Promise<void>;
+
+  async execute(input: TInput): Promise<BatchResultDTO> {
+    const itemIds = this.getItemIds(input);
+    const failed: FailedItemDTO[] = [];
+
+    for (const itemId of itemIds) {
+      try {
+        await this.executeItem(itemId);
+      } catch (error) {
+        failed.push({
+          id: itemId,
+          error: {
+            code: error instanceof AppError ? error.code : 'UNKNOWN',
+            message: error instanceof Error ? error.message : String(error),
+          },
+        });
+      }
+    }
+
+    return { ok: failed.length === 0, failed };
+  }
+}
+```
+
+```typescript
+// Mark emails use case extends BatchUseCase
+export class MarkEmailsUseCase extends BatchUseCase<MarkEmailsInput, string> {
+  constructor(private getProvider: (accountId: string) => IEmailProviderPort) {
+    super();
+  }
+
+  getItemIds(input: MarkEmailsInput): string[] {
+    return input.ids;
+  }
+
+  async executeItem(id: string): Promise<void> {
+    // Provider-specific implementation
+  }
+}
+```
+
+---
+
+### 4. Proposed Folder Structure
+
+```
+src/
+├── main.ts                           # Entry point (currently cli.ts -> renamed)
+
+├── domain/                           # DOMAIN LAYER (no dependencies)
+│   └── types/
+│       ├── email.ts                  # Email, Attachment, Folder interfaces
+│       └── errors.ts                 # AppError base class
+
+├── application/                      # APPLICATION LAYER (depends on domain + ports)
+│   ├── ports/                        # Interface definitions (inward dependencies only)
+│   │   ├── email-provider.port.ts
+│   │   ├── token-storage.port.ts
+│   │   ├── config.port.ts
+│   │   └── use-case.port.ts
+│   │
+│   ├── dto/                          # Data Transfer Objects
+│   │   ├── email.dto.ts
+│   │   ├── send-email.dto.ts
+│   │   ├── batch-result.dto.ts
+│   │   └── account.dto.ts
+│   │
+│   ├── email/                        # Email use cases
+│   │   ├── list-emails.usecase.ts
+│   │   ├── read-email.usecase.ts
+│   │   ├── read-thread.usecase.ts
+│   │   ├── search-emails.usecase.ts
+│   │   ├── send-email.usecase.ts
+│   │   ├── reply.usecase.ts
+│   │   ├── mark.usecase.ts
+│   │   ├── move.usecase.ts
+│   │   ├── delete.usecase.ts
+│   │   ├── status.usecase.ts
+│   │   ├── folders.usecase.ts
+│   │   └── batch.usecase.ts
+│   │
+│   └── account/                      # Account use cases
+│       ├── add-account.usecase.ts
+│       ├── list-accounts.usecase.ts
+│       └── remove-account.usecase.ts
+
+├── infrastructure/                    # INFRASTRUCTURE LAYER (implements ports)
+│   ├── di/
+│   │   └── container.ts             # Optional DI container
+│   │
+│   ├── providers/                    # Email provider implementations
+│   │   ├── email-provider.base.ts   # Abstract base (shared logic)
+│   │   ├── gmail-provider.ts
+│   │   └── outlook-provider.ts
+│   │
+│   ├── auth/                         # OAuth implementations
+│   │   ├── google-auth.ts
+│   │   └── outlook-auth.ts
+│   │
+│   ├── storage/                      # Storage implementations
+│   │   ├── token-storage.ts         # Interface
+│   │   └── json-file-token-storage.ts
+│   │
+│   ├── config/                       # Config implementations
+│   │   ├── config-storage.ts        # Interface
+│   │   └── json-file-config-storage.ts
+│   │
+│   └── email/                        # Email utilities (existing code)
+│       ├── composer.ts
+│       └── parser.ts
+
+└── presentation/                     # PRESENTATION LAYER (depends on application)
+    ├── cli.ts                        # Commander setup (thin)
+    ├── shared/
+    │   ├── account-resolver.ts       # Resolves provider from account flag
+    │   └── output.ts                 # JSON output formatting
+    └── commands/                     # One file per command (thin wrappers)
+        ├── list-command.ts
+        ├── read-command.ts
+        ├── send-command.ts
+        ├── search-command.ts
+        ├── mark-command.ts
+        ├── move-command.ts
+        ├── delete-command.ts
+        ├── status-command.ts
+        ├── folders-command.ts
+        └── account/
+            ├── index.ts
+            ├── add-command.ts
+            ├── list-command.ts
+            └── remove-command.ts
+```
+
+---
+
+### 5. Feature Complexity by Component
+
+| Component | Complexity | Reason |
+|-----------|------------|--------|
+| Move domain types to `domain/` | LOW | Extract existing types, no new logic |
+| Create `application/ports/` interfaces | LOW | Define interfaces matching existing EmailProvider |
+| Refactor providers to implement ports | MEDIUM | Change imports, add interface implementation |
+| Create use cases | MEDIUM | Extract business logic from cli.ts and providers |
+| Create DI container | MEDIUM | Only if needed (start without) |
+| Thin command handlers | LOW | Delegate to use cases, minimal logic |
+| Batch base class | MEDIUM | Eliminate code duplication |
+| Write unit tests | MEDIUM | Mock dependencies, test use cases |
+| Write integration tests | HIGH | Provider tests need fixtures or real API |
+
+---
+
+### 6. Dependencies Between Components
+
+```
+Build Order (dependency-aware):
+
+1. domain/types        -> No dependencies (pure types)
+2. domain/errors       -> Depends on domain/types
+3. application/ports   -> Depends on domain/types
+4. application/dto     -> Depends on domain/types
+5. infrastructure/storage (interfaces + JSON impl) -> Depends on domain/types
+6. infrastructure/auth -> Depends on storage
+7. infrastructure/email (parser, composer) -> No external deps
+8. infrastructure/providers (base + Gmail + Outlook) -> Depends on auth, email
+9. infrastructure/di/container -> Wires providers (optional, build last)
+10. application/email/use-cases -> Depends on ports
+11. application/account/use-cases -> Depends on ports
+12. presentation/shared -> Depends on use cases
+13. presentation/commands/* -> Thin wrappers, minimal deps
+14. presentation/cli.ts -> Wires commands
+15. main.ts -> Entry point
+```
+
+---
+
+### 7. What NOT to Build (Anti-Features for Refactor)
+
+| Avoid | Why | Use Instead |
+|-------|-----|------------|
+| Full Clean Architecture with 4+ layers | CLI complexity does not warrant it | 3-layer model (Presentation/Application/Infrastructure) |
+| tsyringe or inversify DI container | Adds complexity without value for CLI | Manual DI with factory functions |
+| Mock `__mocks__` directories | bun:test does not support this | `mock.module()` with `--preload` |
+| jest or vitest | bun:test is built-in and Jest-compatible | bun:test |
+| Domain-driven design patterns | This is a data-mapping layer, not complex domain | Simple type definitions + use cases |
+| Event-driven architecture | Overkill for CLI | Direct use case invocation |
+| CQRS | Not needed for this complexity | Simple command/query separation |
+
+---
 
 ## Sources
 
-**Confidence: LOW** — WebSearch/WebFetch unavailable at time of research. Based on:
-- Training data knowledge of CLI email ecosystem (aerc, neomutt, mbsync, alpine, sylpheed)
-- Project context understanding (Gmail API / Microsoft Graph API)
-- Domain expertise in CLI tool design and agent workflows
-
-**Recommended verification** (when tools available):
-- `aerc` documentation: https://aerc-mail.org/
-- `neomutt` features: https://neomutt.org/features
-- Gmail API email scope: https://developers.google.com/gmail/api/reference/rest
-- Microsoft Graph email: https://learn.microsoft.com/en-us/graph/api/resources/message
+- [Bun Test Documentation](https://bun.sh/docs/test) (HIGH - official docs, 2026)
+- [Bun Test Mocks](https://bun.sh/docs/test/mocks) (HIGH - official docs, 2026)
+- [TSyringe GitHub](https://github.com/microsoft/tsyringe) (MEDIUM - WebFetch)
+- [InversifyJS GitHub](https://github.com/inversify/InversifyJS) (MEDIUM - WebFetch)
+- Existing codebase analysis (verified - current project state)
+- [STACK.md](STACK.md) (HIGH - current project research)
+- [ARCHITECTURE.md](ARCHITECTURE.md) (HIGH - current project research)
 
 ---
-*Feature research for: CLI Email Client*
-*Researched: 2026-04-04*
+
+*Feature research for: mail-cli v1.1 Architecture Refactor*
+*Researched: 2026-04-05*
