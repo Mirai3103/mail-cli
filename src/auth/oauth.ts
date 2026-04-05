@@ -2,6 +2,7 @@
 import keytar from "keytar";
 import { google } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
+import { loadConfig } from "../utils";
 
 const SERVICE = "mail-cli";
 
@@ -10,12 +11,15 @@ const SCOPES = [
 	"https://www.googleapis.com/auth/userinfo.email",
 ];
 
-const oauth2Client = new google.auth.OAuth2(
-	process.env.GMAIL_CLIENT_ID,
-	process.env.GMAIL_CLIENT_SECRET,
-	"http://localhost:8080",
-);
-
+let oauth2Client :OAuth2Client;
+export async function initOAuthClient() {
+	const config = await loadConfig();
+	oauth2Client = new google.auth.OAuth2(
+		config.gmail.clientId,
+		config.gmail.clientSecret,
+		"http://localhost:8080",
+	);
+}
 /**
  * Generate the OAuth2 authorization URL
  */

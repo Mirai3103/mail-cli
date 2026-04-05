@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import { Command, Option } from "commander";
+import * as fs from "node:fs/promises";
 import { loadConfig } from "./utils/index.js";
 import {
 	getAccessToken,
 	listAccounts,
 	deleteTokens,
-	saveTokens,
+	saveTokens,initOAuthClient
 } from "./auth/index.js";
-import { getOutlookAuthToken } from "./auth/outlook-oauth.js";
+import { getOutlookAuthToken, initOutlookClient} from "./auth/outlook-oauth.js";
 import type { Email } from "./providers/email-provider.js";
 import { GmailProvider } from "./providers/gmail-provider.js";
 import { OutlookProvider } from "./providers/outlook-provider.js";
@@ -375,15 +376,15 @@ program
 			// D-10: body is required for send (either --body or --body-file-path)
 			let body = options.body || "";
 			if (options.bodyFilePath) {
-				// D-11: Read body from file using Bun.file()
-				const file = Bun.file(options.bodyFilePath);
-				if (!(await file.exists())) {
+				// D-11: Read body from file using fs.promises
+				try {
+					body = await fs.readFile(options.bodyFilePath, "utf-8");
+				} catch {
 					throw new CLIError(
 						"FILE_NOT_FOUND",
 						`Body file not found: ${options.bodyFilePath}`,
 					);
 				}
-				body = await file.text();
 			}
 
 			if (!body && !options.bodyFilePath) {
@@ -409,8 +410,9 @@ program
 					? options.attach
 					: [options.attach];
 				for (const path of attachPaths) {
-					const file = Bun.file(path);
-					if (!(await file.exists())) {
+					try {
+						await fs.access(path);
+					} catch {
 						throw new CLIError(
 							"FILE_NOT_FOUND",
 							`Attachment file not found: ${path}`,
@@ -660,4 +662,11 @@ program
 	});
 
 // Parse and run
-program.parse();
+Promise.all([initOAuthClient(), initOutlookClient()])
+	.then(() => {
+		program.parse();
+	})
+	.catch((err) => {
+		printError(err as Error);
+		process.exit(1);
+	});

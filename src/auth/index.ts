@@ -6,4 +6,5 @@ export {
 	deleteTokens,
 	listAccounts,
 	refreshAccessToken,
+	initOAuthClient
 } from "./oauth.js";

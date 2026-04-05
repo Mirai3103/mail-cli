@@ -1,3 +1,4 @@
+import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -34,24 +35,18 @@ export function getConfigPath(): string {
 
 /**
  * Ensures the ~/.emailcli/ directory exists.
- * Creates it if it doesn't exist using Bun's file API.
+ * Creates it if it doesn't exist using Node.js fs.
  */
 export async function ensureConfigDir(): Promise<void> {
 	const configPath = getConfigPath();
 	const configDir = path.dirname(configPath);
 
-	// Check if directory exists using Bun.file
-	const dirFile = Bun.file(configDir);
-	if (!(await dirFile.exists())) {
-		// Create directory structure
-		await Bun.write(configDir, "");
-		// Note: Bun.file for a directory doesn't work for creation
-		// Use Bun's mkdir equivalent via write to empty path
-		try {
-			await Bun.write(configDir + "/.keep", "");
-		} catch {
-			// Directory creation may have already happened
-		}
+	// Check if directory exists using fs.access
+	try {
+		await fs.access(configDir);
+	} catch {
+		// Directory doesn't exist, create it
+		await fs.mkdir(configDir, { recursive: true });
 	}
 }
 
@@ -69,22 +64,20 @@ export async function loadConfig(): Promise<Config> {
 	const configPath = getConfigPath();
 
 	// Check if config file exists
-	const configFile = Bun.file(configPath);
 	let config: Config;
 
-	if (!(await configFile.exists())) {
-		// Auto-create config file with default empty schema (D-05)
-		config = { ...DEFAULT_CONFIG };
-		await Bun.write(configPath, JSON.stringify(config, null, 2));
-	} else {
-		// Read existing config
-		const content = await configFile.text();
+	try {
+		const content = await fs.readFile(configPath, "utf-8");
 		try {
 			config = JSON.parse(content) as Config;
 		} catch {
 			// If parsing fails, use default config
 			config = { ...DEFAULT_CONFIG };
 		}
+	} catch {
+		// Auto-create config file with default empty schema (D-05)
+		config = { ...DEFAULT_CONFIG };
+		await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 	}
 
 	// Apply environment variable overrides (D-06)

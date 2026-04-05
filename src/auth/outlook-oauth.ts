@@ -1,41 +1,41 @@
 import { PublicClientApplication, type ICachePlugin } from "@azure/msal-node";
 import { saveTokens, getTokens } from "./oauth.js";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { join } from "path";
+import { loadConfig } from "../utils/config.js";
 
-const OUTLOOK_CLIENT_ID = process.env.OUTLOOK_CLIENT_ID;
+let OUTLOOK_CLIENT_ID: string | undefined;
 const CACHE_DIR = join(process.env.HOME || "", ".emailcli");
 const CACHE_FILE = join(CACHE_DIR, "outlook-msal-cache.json");
-
+export async function initOutlookClient() {
+	const config = await loadConfig();
+	OUTLOOK_CLIENT_ID = config.outlook.clientId;
+}
 // Ensure cache directory exists
 async function ensureCacheDir(): Promise<void> {
 	try {
 		await mkdir(CACHE_DIR, { recursive: true });
-	} catch {}
+	} catch { }
 }
 
 /**
- * Read the persisted MSAL cache from disk using Bun.file().
+ * Read the persisted MSAL cache from disk using fs.promises.
  */
 async function readCache(): Promise<string> {
 	try {
 		await ensureCacheDir();
-		const file = Bun.file(CACHE_FILE);
-		if (await file.exists()) {
-			return await file.text();
-		}
-		return "{}";
+		return await readFile(CACHE_FILE, "utf-8");
 	} catch {
 		return "{}";
 	}
 }
 
 /**
- * Write the MSAL cache to disk using Bun.write().
+ * Write the MSAL cache to disk using fs.promises.
  */
 async function writeCache(cache: string): Promise<void> {
 	await ensureCacheDir();
-	await Bun.write(CACHE_FILE, cache);
+	await writeFile(CACHE_FILE, cache);
 }
 
 /**
