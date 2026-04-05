@@ -1,7 +1,7 @@
-import { test, expect, beforeEach, afterEach } from "bun:test";
+import { expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import * as os from "node:os";
+import * as path from "node:path";
 
 const REAL_HOME = os.homedir();
 const TEST_CONFIG_DIR = path.join(REAL_HOME, ".emailcli");
@@ -10,7 +10,9 @@ const TEST_CONFIG_FILE = path.join(TEST_CONFIG_DIR, "config.json");
 test("getConfigPath returns path to config.json in home directory", async () => {
 	const { ConfigImpl } = await import("./config.js");
 	const config = new ConfigImpl();
-	expect(config.getConfigPath()).toBe(path.join(REAL_HOME, ".emailcli", "config.json"));
+	expect(config.getConfigPath()).toBe(
+		path.join(REAL_HOME, ".emailcli", "config.json"),
+	);
 });
 
 test("loadConfig reads existing config file", async () => {

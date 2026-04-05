@@ -1,5 +1,5 @@
-import { loadConfig, getConfigPath } from "../utils/config.js";
 import type { ConfigPort } from "../types/ports.js";
+import { getConfigPath, loadConfig } from "../utils/config.js";
 
 /**
  * ConfigImpl implements ConfigPort using file-based config storage.

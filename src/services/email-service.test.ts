@@ -1,6 +1,6 @@
-import { test, expect, describe, vi, beforeEach } from "bun:test";
-import { EmailService } from "./email-service";
+import { beforeEach, describe, expect, test, vi } from "bun:test";
 import { mockEmail, mockEmailProvider } from "../test/mocks";
+import { EmailService } from "./email-service";
 
 describe("EmailService", () => {
 	let service: EmailService;
@@ -40,7 +40,10 @@ describe("EmailService", () => {
 	describe("search", () => {
 		test("delegates to provider.search with query and limit", async () => {
 			await service.search("from:sender@example.com", 20);
-			expect(mockEmailProvider.search).toHaveBeenCalledWith("from:sender@example.com", 20);
+			expect(mockEmailProvider.search).toHaveBeenCalledWith(
+				"from:sender@example.com",
+				20,
+			);
 		});
 
 		test("returns search results from provider", async () => {

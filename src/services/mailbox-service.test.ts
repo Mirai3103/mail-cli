@@ -1,6 +1,6 @@
-import { test, expect, describe, vi, beforeEach } from "bun:test";
-import { MailboxService } from "./mailbox-service";
+import { beforeEach, describe, expect, test, vi } from "bun:test";
 import { mockEmailProvider, mockFolder } from "../test/mocks";
+import { MailboxService } from "./mailbox-service";
 
 describe("MailboxService", () => {
 	let service: MailboxService;

@@ -1,5 +1,5 @@
-import type { TokenStoragePort, ConfigPort } from "../types/ports.js";
 import { getAccessToken, getOutlookAuthToken } from "../auth/index.js";
+import type { ConfigPort, TokenStoragePort } from "../types/ports.js";
 import { CLIError } from "../utils/errors.js";
 
 function getProviderFromAccount(account: string): string {
@@ -14,7 +14,9 @@ export class AccountService {
 		private config: ConfigPort,
 	) {}
 
-	async addAccount(provider: string): Promise<{ account: string; provider: string }> {
+	async addAccount(
+		provider: string,
+	): Promise<{ account: string; provider: string }> {
 		const config = await this.config.loadConfig();
 
 		if (provider === "gmail") {
@@ -38,7 +40,10 @@ export class AccountService {
 			const accounts = await this.tokenStorage.listAccounts();
 			const outlookAccount = accounts.find((a) => a.endsWith(":outlook"));
 			if (!outlookAccount) {
-				throw new CLIError("OUTLOOK_AUTH_ERROR", "Failed to get Outlook account after authentication");
+				throw new CLIError(
+					"OUTLOOK_AUTH_ERROR",
+					"Failed to get Outlook account after authentication",
+				);
 			}
 			return { account: outlookAccount, provider: "outlook" };
 		} else {

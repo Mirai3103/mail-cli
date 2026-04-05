@@ -114,8 +114,8 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   3. Original filename is preserved from Content-Disposition header
   4. Large attachments stream to disk without full in-memory load
 **Plans**: 2 plans
-- [ ] 11-01-PLAN.md — Core attachment download (EmailProviderPort + Gmail/Outlook implementations)
-- [ ] 11-02-PLAN.md — CLI integration (--download flag, directory selection, streaming)
+- [x] 11-01-PLAN.md — Core attachment download (EmailProviderPort + Gmail/Outlook implementations)
+- [x] 11-02-PLAN.md — CLI integration (--download flag, directory selection, streaming)
 
 #### Phase 12: Draft Management
 **Goal**: Users can save, load, edit, and delete email drafts
@@ -145,7 +145,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 8. Unit & Integration Testing | v1.1 | 3/3 | Complete | 2026-04-05 |
 | 9. Logging, Error Handling & Code Quality | v1.1 | 3/3 | Complete | 2026-04-05 |
 | 10. CI/CD Pipeline & Documentation | v1.1 | 2/2 | Complete | 2026-04-05 |
-| 11. Attachment Download | v1.1 | 0/2 | Not started | - |
+| 11. Attachment Download | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 12. Draft Management | v1.1 | 0/? | Not started | - |
 
 ---

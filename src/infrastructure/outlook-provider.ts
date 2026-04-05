@@ -2,6 +2,7 @@ import { Client } from "@microsoft/microsoft-graph-client";
 import { refreshOutlookToken } from "../auth/outlook-oauth.js";
 import type {
 	Attachment,
+	AttachmentDownloadResult,
 	Email,
 	Folder,
 	SendEmailOptions,
@@ -521,6 +522,41 @@ export class OutlookProvider implements EmailProviderPort {
 		} catch (err) {
 			if (err instanceof CLIError) throw err;
 			throw new CLIError("OUTLOOK_API_ERROR", "Failed to list folders", err);
+		}
+	}
+
+	async downloadAttachment(
+		messageId: string,
+		attachmentId: string,
+		filename: string,
+	): Promise<AttachmentDownloadResult> {
+		try {
+			const client = await this.getClient();
+			const localMessageId = this.stripPrefix(messageId);
+
+			// Fetch attachment metadata and content from Graph API
+			const attachment = await client
+				.api(`/me/messages/${localMessageId}/attachments/${attachmentId}`)
+				.get();
+
+			// Decode base64 contentBytes to Buffer
+			const decoded = Buffer.from(attachment.contentBytes, "base64");
+
+			return {
+				content: decoded,
+				filename: attachment.name || filename,
+				mimeType: attachment.contentType || "application/octet-stream",
+				size: attachment.size
+					? parseInt(String(attachment.size), 10)
+					: decoded.length,
+			};
+		} catch (err) {
+			if (err instanceof CLIError) throw err;
+			throw new CLIError(
+				"OUTLOOK_API_ERROR",
+				`Failed to download attachment ${attachmentId} from message ${messageId}`,
+				err,
+			);
 		}
 	}
 }

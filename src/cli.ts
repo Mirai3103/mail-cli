@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
+import { registerCommands } from "./commands/index.js";
 import {
 	initOAuthClient,
 	initOutlookClient,
 } from "./infrastructure/auth/index.js";
-import { registerCommands } from "./commands/index.js";
 import { setupGlobalErrorHandlers } from "./utils/error-handler.js";
 
 // Setup global error handlers BEFORE any async operations

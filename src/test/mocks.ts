@@ -1,6 +1,10 @@
-import { test, expect, describe, vi } from "bun:test";
-import type { EmailProviderPort, TokenStoragePort, ConfigPort } from "../types/ports.js";
+import { vi } from "bun:test";
 import type { Email, Folder } from "../types/domain.js";
+import type {
+	ConfigPort,
+	EmailProviderPort,
+	TokenStoragePort,
+} from "../types/ports.js";
 
 // Shared mock data
 export const mockEmail: Email = {
@@ -42,7 +46,10 @@ export const mockEmailProvider: EmailProviderPort = {
 // Mock TokenStoragePort
 export const mockTokenStorage: TokenStoragePort = {
 	saveTokens: vi.fn().mockResolvedValue(undefined),
-	getTokens: vi.fn().mockResolvedValue({ access_token: "test-token", refresh_token: "test-refresh" }),
+	getTokens: vi.fn().mockResolvedValue({
+		access_token: "test-token",
+		refresh_token: "test-refresh",
+	}),
 	deleteTokens: vi.fn().mockResolvedValue(undefined),
 	listAccounts: vi.fn().mockResolvedValue(["user@gmail.com:gmail"]),
 	refreshAccessToken: vi.fn().mockResolvedValue("new-access-token"),

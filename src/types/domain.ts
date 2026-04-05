@@ -41,3 +41,10 @@ export interface MailboxStatus {
 	unread: number;
 	total: number;
 }
+
+export interface AttachmentDownloadResult {
+	content: Buffer;
+	filename: string;
+	mimeType: string;
+	size: number;
+}

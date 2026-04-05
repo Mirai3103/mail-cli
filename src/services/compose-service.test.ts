@@ -1,6 +1,6 @@
-import { test, expect, describe, vi, beforeEach } from "bun:test";
-import { ComposeService } from "./compose-service";
+import { beforeEach, describe, expect, test, vi } from "bun:test";
 import { mockEmailProvider } from "../test/mocks";
+import { ComposeService } from "./compose-service";
 
 describe("ComposeService", () => {
 	let service: ComposeService;
@@ -49,7 +49,9 @@ describe("ComposeService", () => {
 		test("returns reply id wrapped in object", async () => {
 			mockEmailProvider.reply = vi.fn().mockResolvedValue("reply-new-456");
 			const service = new ComposeService(mockEmailProvider);
-			const result = await service.reply("msg-123", { to: ["sender@example.com"] });
+			const result = await service.reply("msg-123", {
+				to: ["sender@example.com"],
+			});
 			expect(result).toEqual({ id: "reply-new-456" });
 		});
 

@@ -1,6 +1,6 @@
-import { test, expect, describe, vi, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test, vi } from "bun:test";
+import { mockConfig, mockTokenStorage } from "../test/mocks";
 import { AccountService } from "./account-service";
-import { mockTokenStorage, mockConfig } from "../test/mocks";
 
 describe("AccountService", () => {
 	let service: AccountService;
@@ -12,7 +12,9 @@ describe("AccountService", () => {
 
 	describe("addAccount", () => {
 		test("throws error when gmail credentials not configured", async () => {
-			mockConfig.loadConfig = vi.fn().mockResolvedValue({ gmail: {}, outlook: {} });
+			mockConfig.loadConfig = vi
+				.fn()
+				.mockResolvedValue({ gmail: {}, outlook: {} });
 			await expect(service.addAccount("gmail")).rejects.toThrow();
 		});
 
@@ -26,10 +28,12 @@ describe("AccountService", () => {
 
 	describe("listAccounts", () => {
 		test("returns accounts mapped to account/provider format", async () => {
-			mockTokenStorage.listAccounts = vi.fn().mockResolvedValue([
-				"user@gmail.com:gmail",
-				"user@outlook.com:outlook",
-			]);
+			mockTokenStorage.listAccounts = vi
+				.fn()
+				.mockResolvedValue([
+					"user@gmail.com:gmail",
+					"user@outlook.com:outlook",
+				]);
 			const service = new AccountService(mockTokenStorage, mockConfig);
 			const result = await service.listAccounts();
 			expect(result).toEqual([
@@ -48,20 +52,28 @@ describe("AccountService", () => {
 
 	describe("removeAccount", () => {
 		test("deletes tokens for account", async () => {
-			mockTokenStorage.listAccounts = vi.fn().mockResolvedValue(["user@gmail.com:gmail"]);
+			mockTokenStorage.listAccounts = vi
+				.fn()
+				.mockResolvedValue(["user@gmail.com:gmail"]);
 			const service = new AccountService(mockTokenStorage, mockConfig);
 			await service.removeAccount("user@gmail.com:gmail");
-			expect(mockTokenStorage.deleteTokens).toHaveBeenCalledWith("user@gmail.com:gmail");
+			expect(mockTokenStorage.deleteTokens).toHaveBeenCalledWith(
+				"user@gmail.com:gmail",
+			);
 		});
 
 		test("throws error when account not found", async () => {
 			mockTokenStorage.listAccounts = vi.fn().mockResolvedValue([]);
 			const service = new AccountService(mockTokenStorage, mockConfig);
-			await expect(service.removeAccount("nonexistent:gmail")).rejects.toThrow();
+			await expect(
+				service.removeAccount("nonexistent:gmail"),
+			).rejects.toThrow();
 		});
 
 		test("returns removed account id", async () => {
-			mockTokenStorage.listAccounts = vi.fn().mockResolvedValue(["user@gmail.com:gmail"]);
+			mockTokenStorage.listAccounts = vi
+				.fn()
+				.mockResolvedValue(["user@gmail.com:gmail"]);
 			const service = new AccountService(mockTokenStorage, mockConfig);
 			const result = await service.removeAccount("user@gmail.com:gmail");
 			expect(result).toEqual({ removed: "user@gmail.com:gmail" });

@@ -1,5 +1,4 @@
 import MailComposer from "nodemailer/lib/mail-composer";
-import type { SendEmailOptions } from "../providers/email-provider.js";
 
 /**
  * Encode a Buffer to base64url string for Gmail API raw field.

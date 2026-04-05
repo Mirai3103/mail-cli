@@ -1,5 +1,5 @@
-import { CLIError } from "./errors.js";
 import { logger } from "../services/logger.js";
+import { CLIError } from "./errors.js";
 import { ExitCode } from "./exit-codes.js";
 
 export interface ErrorResponse {
@@ -21,7 +21,7 @@ export function handleError(error: unknown): never {
 		};
 
 		// LOG-02: Output to stderr (JSON format)
-		process.stderr.write(JSON.stringify(response) + "\n");
+		process.stderr.write(`${JSON.stringify(response)}\n`);
 
 		// LOG-04: Exit codes - determine which one based on error code
 		const exitCode = getExitCodeForError(error);
@@ -38,7 +38,7 @@ export function handleError(error: unknown): never {
 		},
 	};
 
-	process.stderr.write(JSON.stringify(response) + "\n");
+	process.stderr.write(`${JSON.stringify(response)}\n`);
 	process.exit(ExitCode.SERVER_ERROR);
 }
 

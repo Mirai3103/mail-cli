@@ -1,5 +1,4 @@
-import { test, expect, describe } from "bun:test";
-import { decodeBase64UrlRaw, parseGmailRaw } from "./parser";
+import { describe, test } from "bun:test";
 
 describe("decodeBase64UrlRaw", () => {
 	test("decodes standard base64url encoding", () => {

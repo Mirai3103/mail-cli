@@ -1,15 +1,15 @@
 // Re-export auth functions for infrastructure layer
 export {
-  getAccessToken,
-  saveTokens,
-  getTokens,
-  deleteTokens,
-  listAccounts,
-  initOAuthClient,
-  generateAuthUrl,
+	deleteTokens,
+	generateAuthUrl,
+	getAccessToken,
+	getTokens,
+	initOAuthClient,
+	listAccounts,
+	refreshAccessToken,
+	saveTokens,
 } from "../../auth/oauth.js";
 export {
-  getOutlookAuthToken,
-  initOutlookClient,
+	getOutlookAuthToken,
+	initOutlookClient,
 } from "../../auth/outlook-oauth.js";
-export { refreshAccessToken } from "../../auth/oauth.js";

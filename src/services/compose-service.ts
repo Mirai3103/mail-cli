@@ -1,5 +1,5 @@
-import type { EmailProviderPort } from "../types/ports.js";
 import type { SendEmailOptions } from "../types/domain.js";
+import type { EmailProviderPort } from "../types/ports.js";
 
 export interface ReplyOptions {
 	to: string[];

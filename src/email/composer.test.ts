@@ -1,9 +1,4 @@
-import { test, expect, describe } from "bun:test";
-import {
-	base64UrlEncode,
-	buildRawMessage,
-	buildReplyMessage,
-} from "./composer";
+import { describe, test } from "bun:test";
 
 describe("base64UrlEncode", () => {
 	test("encodes buffer to base64url string", () => {

@@ -1,5 +1,4 @@
-import { test, expect, describe, beforeEach, vi } from "bun:test";
-import { GmailProvider } from "./gmail-provider";
+import { describe, test } from "bun:test";
 
 describe("GmailProvider", () => {
 	describe("read", () => {

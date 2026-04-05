@@ -561,8 +561,7 @@ async function cmdProfileSample(overridePath, options, raw) {
 					sessionUsed = true;
 				}
 				if (sessionUsed) projectSessionsUsed++;
-			} catch {
-			}
+			} catch {}
 		}
 
 		if (projectMessages > 0) {

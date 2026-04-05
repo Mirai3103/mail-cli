@@ -2,7 +2,12 @@ import { google } from "googleapis";
 import { refreshAccessToken } from "../auth/index.js";
 import { buildRawMessage, buildReplyMessage } from "../email/composer.js";
 import { parseGmailRaw } from "../email/parser.js";
-import type { Email, Folder, SendEmailOptions } from "../types/domain.js";
+import type {
+	AttachmentDownloadResult,
+	Email,
+	Folder,
+	SendEmailOptions,
+} from "../types/domain.js";
 import type { EmailProviderPort } from "../types/ports.js";
 import { CLIError } from "../utils/errors.js";
 import {
@@ -461,6 +466,48 @@ export class GmailProvider implements EmailProviderPort {
 		} catch (err) {
 			if (err instanceof CLIError) throw err;
 			throw new CLIError("GMAIL_API_ERROR", "Failed to list folders", err);
+		}
+	}
+
+	async downloadAttachment(
+		messageId: string,
+		attachmentId: string,
+		filename: string,
+	): Promise<AttachmentDownloadResult> {
+		try {
+			const accessToken = await this.getAuthToken();
+			const oauth2Client = new google.auth.OAuth2();
+			oauth2Client.setCredentials({ access_token: accessToken });
+
+			const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
+			// Fetch attachment content from Gmail API
+			const response = await gmail.users.messages.attachments.get({
+				userId: "me",
+				messageId: messageId,
+				id: attachmentId,
+			});
+
+			// Gmail returns base64-encoded data
+			const data = response.data.data!;
+			// Decode base64 to Buffer
+			const decoded = Buffer.from(data, "base64");
+
+			return {
+				content: decoded,
+				filename: filename,
+				mimeType: response.data.mimeType || "application/octet-stream",
+				size: response.data.size
+					? parseInt(String(response.data.size), 10)
+					: decoded.length,
+			};
+		} catch (err) {
+			if (err instanceof CLIError) throw err;
+			throw new CLIError(
+				"GMAIL_API_ERROR",
+				`Failed to download attachment ${attachmentId} from message ${messageId}`,
+				err,
+			);
 		}
 	}
 }

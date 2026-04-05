@@ -1,10 +1,10 @@
 import {
-	simpleParser,
-	type ParsedMail,
 	type AddressObject,
 	type EmailAddress,
+	type ParsedMail,
+	simpleParser,
 } from "mailparser";
-import type { Email, Attachment } from "../providers/email-provider.js";
+import type { Attachment, Email } from "../providers/email-provider.js";
 
 /**
  * Decode Gmail API base64url-encoded raw email to UTF-8 string.

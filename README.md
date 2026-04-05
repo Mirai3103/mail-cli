@@ -14,6 +14,68 @@ npx @laffy1309/emailcli account add --provider gmail
 npm install -g @laffy1309/emailcli
 ```
 
+## Architecture
+
+mail-cli follows Clean Architecture with four distinct layers:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 CLI Presentation Layer                       │
+│    list.ts  read.ts  send.ts  search.ts  mark.ts  ...       │
+└────────────────────────────┬────────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Application Services Layer                   │
+│         MailboxService  EmailService  ComposeService        │
+│                   AccountService                            │
+└────────────────────────────┬────────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Domain Types Layer                       │
+│   EmailProviderPort  TokenStoragePort  ConfigPort  ...      │
+└────────────────────────────┬────────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Infrastructure Layer                       │
+│   GmailProvider  OutlookProvider  TokenStorageImpl          │
+│                  ConfigImpl                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Data flow:** CLI command → service → provider → API (Gmail/Outlook)
+
+For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Project Structure
+
+```
+mail-cli/
+├── src/
+│   ├── commands/      # CLI command handlers (list, read, send, etc.)
+│   ├── services/      # Business logic (MailboxService, EmailService, etc.)
+│   ├── types/         # Port interfaces and domain types
+│   ├── infrastructure/# Provider implementations (Gmail, Outlook)
+│   └── providers/     # Provider-specific implementations
+├── .github/
+│   └── workflows/     # GitHub Actions CI/CD
+├── docs/              # Provider setup guides
+└── CONTRIBUTING.md   # Development guidelines
+```
+
+**Layer responsibilities:**
+- `src/commands/` - CLI argument parsing and command registration
+- `src/services/` - Pure business logic (framework-agnostic)
+- `src/types/` - Interface definitions (ports) for external dependencies
+- `src/infrastructure/` - Concrete implementations (Gmail, Outlook, config, tokens)
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Local development setup
+- Code style and linting
+- Running tests
+- Making changes
+
 ## Setup
 
 ### 1. Configure OAuth Credentials

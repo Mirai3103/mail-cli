@@ -1,11 +1,11 @@
 export {
-	getAccessToken,
-	generateAuthUrl,
-	saveTokens,
-	getTokens,
 	deleteTokens,
+	generateAuthUrl,
+	getAccessToken,
+	getTokens,
+	initOAuthClient,
 	listAccounts,
 	refreshAccessToken,
-	initOAuthClient,
+	saveTokens,
 } from "./oauth.js";
 export { getOutlookAuthToken, initOutlookClient } from "./outlook-oauth.js";

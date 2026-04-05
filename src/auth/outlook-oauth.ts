@@ -1,8 +1,8 @@
-import { PublicClientApplication, type ICachePlugin } from "@azure/msal-node";
-import { saveTokens, getTokens } from "./oauth.js";
-import { mkdir, readFile, writeFile, access } from "node:fs/promises";
-import { join } from "path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { type ICachePlugin, PublicClientApplication } from "@azure/msal-node";
 import { loadConfig } from "../utils/config.js";
+import { getTokens, saveTokens } from "./oauth.js";
 
 let OUTLOOK_CLIENT_ID: string | undefined;
 const CACHE_DIR = join(process.env.HOME || "", ".emailcli");
@@ -99,7 +99,7 @@ export async function getOutlookAuthToken(email: string): Promise<void> {
 		scopes: [...OUTLOOK_SCOPES],
 	});
 
-	if (authResult && authResult.account) {
+	if (authResult?.account) {
 		// MSAL caches tokens internally via the cache plugin
 		// Also store account identifiers to keytar for account lookup
 		const accountEmail = authResult.account.username || email;
@@ -157,7 +157,7 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 				account,
 			});
 
-			if (refreshResult && refreshResult.accessToken) {
+			if (refreshResult?.accessToken) {
 				// Update keytar with fresh tokens (MSAL cache is updated automatically)
 				await saveTokens(keytarAccount, {
 					accessToken: refreshResult.accessToken,
@@ -185,7 +185,7 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 		scopes: [...OUTLOOK_SCOPES],
 	});
 
-	if (authResult && authResult.accessToken) {
+	if (authResult?.accessToken) {
 		const accountEmail = authResult.account?.username || email;
 		await saveTokens(`${accountEmail}:outlook`, {
 			accessToken: authResult.accessToken,
