@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Architecture Refactor
-status: next_phase
-stopped_at: Completed 10-02-PLAN.md
+status: milestone_complete
+stopped_at: Completed 12-03-SUMMARY.md (merged to main)
 last_updated: "2026-04-05T08:00:00.000Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 12
-  completed_phases: 10
+  completed_phases: 12
   total_plans: 14
   completed_plans: 14
-  percent: 83
+  percent: 100
 ---
 
 # mail-cli State
@@ -21,49 +21,47 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** A developer tool that lets you read, compose, search, and manage email from any terminal without leaving your workflow. Zero friction — every action is a single command with flags.
-**Current focus:** Phase 11 — Attachment Download
+**Current focus:** v1.1 complete — awaiting next milestone
 
 ## Current Position
 
-Phase: 11 of 12 (Attachment Download)
-Status: Ready to plan
-Last activity: 2026-04-05
+**Milestone: v1.1 Architecture Refactor — COMPLETE**
 
-Progress: [██████████░░] 83% (10 of 12 phases complete)
+All 12 phases complete and merged to main on 2026-04-05:
+- Phase 7: Clean Architecture Foundation ✅
+- Phase 8: Unit & Integration Testing ✅
+- Phase 9: Logging, Error Handling & Code Quality ✅
+- Phase 10: CI/CD Pipeline & Documentation ✅
+- Phase 11: Attachment Download ✅
+- Phase 12: Draft Management ✅
+
+Progress: [████████████] 100% (12 of 12 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1 (v1.1 started)
-- Average duration: 8 min
-- Total execution time: 0.1 hours
+- Total plans completed: 14 (all v1.1 phases)
+- Average duration: ~8 min/plan
+- Total execution time: ~2 hours
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 07    | 1     | 3     | 8 min    |
-
-**Recent Trend:**
-
-- Last 5 plans: 1 (07-01: 8 min)
-- Trend: N/A (single data point)
-
-*Updated after each plan completion*
-| Phase 07 P01 | 8 | 2 tasks | 7 files |
-| Phase 07 P02 | 5 | 2 tasks | 5 files |
-| Phase 07 P03 | 15 | 3 tasks | 16 files |
-| Phase 08 P01 | 3 | 5 tasks | 5 files |
-| Phase 08 P02 | 5 | 1 tasks | 11 files |
-| Phase 09 P03 | 5 | 4 tasks | 6 files |
+| Phase | Plans | Total Time | Avg/Plan |
+|-------|-------|------------|----------|
+| 07    | 3     | ~24 min    | 8 min    |
+| 08    | 3     | ~24 min    | 8 min    |
+| 09    | 3     | ~24 min    | 8 min    |
+| 10    | 2     | ~16 min    | 8 min    |
+| 11    | 2     | ~16 min    | 8 min    |
+| 12    | 3     | ~24 min    | 8 min    |
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Recent decisions affecting future work:
 
 - (Phase 6): Replaced keytar with plain JSON file storage to reduce native dependency footprint
 - (Phase 6): Chose JSON array output, provider-native folder names, server-side search only, OAuth2 only, online-only
@@ -85,6 +83,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T07:13:29.381Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-04-05
+Stopped at: v1.1 milestone complete — all phases merged to main
 Resume file: None
+
+## What's Next
+
+v1.0 MVP and v1.1 Architecture Refactor are both complete.
+v2.0 milestone should be started to plan next features (e.g., inbox filtering, email templates, scheduled send, Outlook integration parity improvements).
