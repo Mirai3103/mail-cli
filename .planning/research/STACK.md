@@ -1,128 +1,249 @@
-# Stack Research
+# Technology Stack: Architecture Refactor
 
-**Domain:** CLI Email Client (Bun + TypeScript)
-**Researched:** 2026-04-04
-**Confidence:** LOW (web search disabled - versions verified against package.json, not live sources)
+**Project:** mail-cli v1.1 Architecture Refactor
+**Researched:** 2026-04-05
+**Confidence:** MEDIUM-HIGH
 
-## Recommended Stack
+## Context
 
-### Core Technologies
+This is a refactor-focused stack analysis. The existing production dependencies (googleapis, @microsoft/microsoft-graph-client, commander, ora, picocolors) remain unchanged. This document covers ONLY what is needed for:
+- Clean Architecture refactoring
+- Dependency injection
+- Unit testing
+- CI/CD pipeline
+- Linting enforcement
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Bun | 1.x (latest) | Runtime | Required per project CLAUDE.md. Native secrets API, fast startup, TypeScript-first |
-| TypeScript | ^6.0.2 | Language | Required per project CLAUDE.md. Strict mode already configured in tsconfig |
-| googleapis | ^171.4.0 | Gmail API client | Official Google library. Handles OAuth2, batching, pagination automatically |
-| @microsoft/microsoft-graph-client | ^3.x | Microsoft Graph API | Official Microsoft library for Outlook/Graph API integration |
-| commander | ^14.0.3 | CLI argument parsing | Already in package.json. Industry standard for Node CLI tools with TypeScript support |
-| ora | ^9.3.0 | Terminal spinners | Already in package.json. Lightweight, configurable spinner for loading states |
-| picocolors | ^1.1.1 | Terminal colors | Already in package.json. Fast, zero-dependency color library |
+## Recommended Stack for Refactor
 
-### Supporting Libraries
+### Core Technologies (No Changes Needed)
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| keytar | ^7.9.0 | Secure credential storage | **Pre-Bun.secrets**: Store OAuth tokens in OS keychain (macOS Keychain, Linux libsecret, Windows Credential Manager) |
-| nodemailer | ^7.x | Email message construction | Composing emails with attachments, MIME encoding |
-| mailparser | ^3.x | Email parsing | Parsing received email (headers, bodies, attachments) for display |
-| open | ^10.x | Open browser for OAuth | Launch OAuth flow in user's default browser |
+| Technology | Current Version | Status | Notes |
+|------------|-----------------|--------|-------|
+| Bun | 1.x | Already using | Required per CLAUDE.md |
+| TypeScript | ^6.0.2 | Already using | Strict mode already configured |
+| Biome | 2.4.10 | Already using | Handles linting + formatting |
+| tsup | 8.5.1 | Already using | Build tool already configured |
 
-### Development Tools
+### Dependency Injection
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| bun test | Testing | Per CLAUDE.md - do not use jest/vitest |
-| @types/bun | TypeScript types | Already in devDependencies |
-| bun --bun-entry | Binary builds | For CLI executable builds |
+| Option | Recommendation | Version | Rationale |
+|--------|----------------|---------|-----------|
+| Manual DI with factory functions | **Recommended** | N/A (no library) | No additional dependency. Sufficient for CLI app complexity. |
+| TSyringe | Alternative if container needed | ^4.x | Lightweight container. Requires `reflect-metadata`. Adds runtime overhead. |
 
-## Installation
+**Why Manual DI is recommended for this project:**
+- CLI apps have linear dependency graphs, not complex object graphs
+- Constructor injection with factory functions covers 90% of testability needs
+- No reflect-metadata polyfill needed
+- Easier to debug (explicit wiring)
+- Project already simplified by removing keytar (see Phase 6 decision to use plain JSON)
 
-```bash
-# Core dependencies (already in package.json)
-bun add googleapis @microsoft/microsoft-graph-client commander ora picocolors keytar nodemailer mailparser open
+**Manual DI Pattern:**
 
-# Dev dependencies (already in package.json)
-bun add -D @types/bun @types/node @types/keytar
+```typescript
+// src/services/interfaces.ts
+export interface IGmailClient {
+  getMessages(userId: string, query: string): Promise<GmailMessage[]>;
+  sendMessage(userId: string, email: RawEmail): Promise<GmailSentMessage>;
+}
+
+export interface IOutlookClient {
+  getMessages(query: string): Promise<OutlookMessage[]>;
+  sendMessage(email: RawEmail): Promise<OutlookSentMessage>;
+}
+
+export interface IEmailService {
+  getInbox(accountId: string): Promise<Email[]>;
+  send(accountId: string, email: Draft): Promise<SentEmail>;
+}
+
+// src/services/email-service.ts
+export function createEmailService(
+  gmailClient: IGmailClient,
+  outlookClient: IOutlookClient,
+  configStore: IConfigStore
+): IEmailService {
+  return new EmailService(gmailClient, outlookClient, configStore);
+}
+
+// Usage in production (wire in main/index.ts)
+const gmailClient = createGmailClient(oauth2Client);
+const outlookClient = createOutlookClient(msalClient);
+const emailService = createEmailService(gmailClient, outlookClient, configStore);
+
+// Usage in tests (inject mocks)
+const mockGmailClient = { getMessages: mock(async () => [{ id: '1', subject: 'Test' }]) };
+const emailService = createEmailService(mockGmailClient, mockOutlookClient, mockConfig);
 ```
 
-## Alternatives Considered
+**If TSyringe is needed later:**
+```typescript
+import 'reflect-metadata';
+import { injectable, inject, container } from 'tsyringe';
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|------------------------|
-| googleapis | @googleapis/gmail (individual API packages) | Only if you need tree-shaking; googleapis is more maintainable |
-| commander | yargs, oclif | oclif if you need plugin architecture; yargs if you prefer fluent API |
-| keytar | Bun.secrets (native) | Bun.secrets is experimental but may replace keytar in future |
-| ora | cli-spinners, signale | ora is already in package.json and sufficient |
+@injectable()
+class EmailService {
+  constructor(
+    @inject('IGmailClient') private gmailClient: IGmailClient,
+    @inject('IOutlookClient') private outlookClient: IOutlookClient
+  ) {}
+}
+```
+**Decision: Start with Manual DI. Add TSyringe only if container features (singleton scopes, disposal, interception) become necessary.**
 
-## What NOT to Use
+### Unit Testing
+
+| Component | Status | Action Needed |
+|-----------|--------|---------------|
+| bun:test | Built-in to Bun | No install. Use `import { test, expect, mock, spyOn } from 'bun:test'` |
+| @types/bun | Already in devDependencies | Already available |
+| jest / vitest | NOT needed | bun:test is Jest-compatible |
+
+**No additional mocking libraries needed.** bun:test provides comprehensive mocking:
+
+| Feature | bun:test API |
+|---------|--------------|
+| Mock functions | `mock(() => ...)` or `jest.fn(() => ...)` |
+| Async mocks | `mockFn.mockResolvedValue(value)` |
+| Spies | `spyOn(obj, 'method')` |
+| Module mocks | `mock.module('./path', () => ({ ... }))` |
+| Mock cleanup | `mock.restore()`, `mock.clearAllMocks()` |
+
+**bunfig.toml for test configuration:**
+
+```toml
+[test]
+retry = 3              # Retry flaky tests
+timeout = 10000        # Per-test timeout in ms
+preload = ["./test/setup.ts"]  # Preload mocks before tests
+
+[test.coverage]
+coverage = true
+coverageReporter = ["text", "lcov"]
+```
+
+**Example test file:**
+
+```typescript
+// src/services/email-service.test.ts
+import { test, expect, mock, spyOn } from 'bun:test';
+import { createEmailService } from './email-service';
+
+test('getInbox delegates to correct provider client', async () => {
+  const mockGmail = { getMessages: mock(async () => [{ id: '1', subject: 'Gmail Test' }]) };
+  const mockOutlook = { getMessages: mock(async () => []) };
+  const mockConfig = {
+    getAccount: mock(async () => ({ id: '1', provider: 'gmail', email: 'test@gmail.com' }))
+  };
+
+  const service = createEmailService(mockGmail, mockOutlook, mockConfig);
+  const emails = await service.getInbox('account-gmail');
+
+  expect(emails).toHaveLength(1);
+  expect(mockGmail.getMessages).toHaveBeenCalledWith('account-gmail', 'in:inbox');
+  expect(mockOutlook.getMessages).not.toHaveBeenCalled();
+});
+```
+
+**Note:** bun:test does NOT support `__mocks__` directories. Use `mock.module()` with `--preload` instead.
+
+### CI/CD
+
+| Component | Recommendation | Configuration |
+|-----------|----------------|---------------|
+| GitHub Actions | `oven-sh/setup-bun@v2` | First-class bun support, auto annotations |
+| Test reporting | JUnit XML via `--reporter=junit` | For GitLab, Jenkins, or when annotations insufficient |
+| Linting check | `biome ci` | Non-interactive check mode for CI |
+
+**GitHub Actions Workflow (`.github/workflows/ci.yml`):**
+
+```yaml
+name: CI
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun test --coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+```
+
+**For GitLab or other CI:**
+
+```bash
+# Generate JUnit XML for test results
+bun test --reporter=junit --reporter-outfile=./bun.xml
+
+# Check lint without auto-fix
+bun run biome ci .
+```
+
+### Linting (No Changes Needed)
+
+| Tool | Current Config | Status |
+|------|----------------|--------|
+| Biome | 2.4.10 | Already in package.json |
+| biome.json | Already configured | No changes needed |
+
+**Existing scripts in package.json:**
+- `bun run lint` - `biome lint --write`
+- `bun run format` - `biome format --write`
+
+**Recommended: Add CI-specific scripts:**
+
+```json
+{
+  "scripts": {
+    "ci:lint": "biome ci",
+    "ci:test": "bun test --coverage",
+    "ci": "bun run ci:lint && bun run ci:test"
+  }
+}
+```
+
+## What NOT to Add for This Refactor
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| express | Not a web server; CLI doesn't need it | N/A |
-| better-sqlite3 | Bun has native bun:sqlite | bun:sqlite |
-| ioredis | Bun has native Bun.redis | Bun.redis |
-| pg / postgres.js | Bun has native Bun.sql | Bun.sql |
-| ws | Bun has native WebSocket | Built-in WebSocket |
-| node-fetch / axios | Bun has native fetch | Built-in fetch |
-| dotenv | Bun auto-loads .env | N/A |
-| jest / vitest | Per CLAUDE.md | bun test |
-| execa / shelljs | Bun has native `$` shell | Bun.$ |
-| node:fs readFile/writeFile | Bun has optimized Bun.file | Bun.file, Bun.write |
+| jest, vitest | bun:test is built-in, Jest-compatible | bun:test |
+| @types/jest | Not needed | bun:test types included |
+| sinon, jest-mock-extended | bun:test has built-in mock, spy, module mocks | bun:test APIs |
+| tsyringe, inversify | Adds complexity without value for CLI DI | Manual DI with factories |
+| ESLint, Prettier | Biome already handles lint + format | Biome |
+| @types/eslint, @types/prettier | Not needed | N/A |
 
-## Stack Patterns by Variant
+## Summary: Dependency Changes for Refactor
 
-**If Gmail-only:**
-- Use googleapis exclusively
-- Simplifies OAuth2 flow (single provider)
+**New dependencies to add:** NONE
 
-**If Gmail + Outlook (unified):**
-- Use googleapis for Gmail
-- Use @microsoft/microsoft-graph-client for Outlook
-- Abstract provider differences behind a unified interface (per PROJECT.md requirements)
+**DevDependencies to add:** NONE
 
-**If Bun.secrets stabilizes:**
-- Consider migrating from keytar to Bun.secrets for reduced native dependency footprint
-- Currently experimental - may not be suitable for production
-
-## Version Compatibility
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| googleapis@171 | Bun 1.x, Node 18+ | Uses native fetch internally |
-| commander@14 | Bun 1.x, Node 16+ | ESM-first |
-| keytar@7 | Bun 1.x | Native module - may require rebuild with Bun |
-| ora@9 | Bun 1.x | Pure JavaScript |
-
-## Native Bun APIs to Leverage
-
-Per bun-types documentation:
-
-```typescript
-// Secure credential storage (experimental)
-import { secrets } from "bun";
-await secrets.set({ service: "mail-cli", name: "gmail-token", value: token });
-const token = await secrets.get({ service: "mail-cli", name: "gmail-token" });
-
-// Shell operations
-import { $ } from "bun";
-await $`open https://accounts.google.com/o/oauth2/v2/auth`;
-
-// File I/O
-import { file } from "bun";
-const content = await file("attachment.txt").text();
-
-// Environment
-// Bun auto-loads .env - no dotenv needed
-const apiKey = Bun.env.API_KEY;
-```
+The refactor only requires:
+1. Adopting manual DI patterns (no library)
+2. Using bun:test for all unit tests
+3. Adding GitHub Actions workflow for CI
+4. Possibly adding `reflect-metadata` only if TSyringe becomes necessary later
 
 ## Sources
 
-- bun-types documentation (local, verified) — Bun native APIs, secrets, shell
-- package.json (verified) — Current project dependencies
-- Training data (NOT verified) — googleapis, commander, keytar version recommendations
-
----
-
-*Stack research for: CLI Email Client*
-*Researched: 2026-04-04*
+- [Bun Test Documentation](https://bun.sh/docs/test) (HIGH - official docs, 2026)
+- [Bun Test Mocks](https://bun.sh/docs/test/mocks) (HIGH - official docs, 2026)
+- [Biome v2.4.10](https://github.com/biomejs/biome) (HIGH - official repo)
+- [TSyringe GitHub](https://github.com/microsoft/tsyringe) (MEDIUM - WebFetch)
+- [InversifyJS v7.10.0](https://github.com/inversify/InversifyJS) (MEDIUM - WebFetch)
+- package.json (verified - current project state)

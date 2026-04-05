@@ -1,307 +1,456 @@
-# Architecture Research
+# Architecture Research: Clean Architecture for TypeScript CLI Email Client
 
-**Domain:** CLI Email Client
-**Researched:** 2026-04-04
-**Confidence:** MEDIUM (based on established CLI application patterns; external verification unavailable)
+**Domain:** CLI Email Client (TypeScript/Bun)
+**Researched:** 2026-04-05
+**Confidence:** MEDIUM-HIGH
 
-## Standard Architecture
+## Executive Summary
 
-### System Overview
+The current codebase has a flat structure with 700+ lines in `cli.ts` mixing CLI parsing, business logic, and data access. The refactor should introduce Clean Architecture layers with dependency injection to achieve testability while preserving the existing CLI interface unchanged. The recommended approach uses a simplified 3-layer model (Presentation / Application / Infrastructure) rather than strict Clean Architecture's 4 layers, appropriate for a CLI tool's complexity level.
+
+## Current Architecture Analysis
+
+### Problems Identified
+
+| Issue | Location | Consequence |
+|-------|----------|-------------|
+| `cli.ts` handles account resolution, error wrapping, AND command execution | `cli.ts` lines 43-88, 226-246 | Business logic coupled to presentation |
+| Providers handle auth tokens, HTTP calls, AND response parsing | `gmail-provider.ts` lines 26-48 | Data access mixed with API calls |
+| Auth module directly uses `fs/promises` for token storage | `oauth.ts` lines 116-123 | Storage logic tightly coupled |
+| No interfaces between layers | All files | Cannot mock for testing |
+| Batch operations have duplicated error handling | `cli.ts` lines 522-542, 594-614, 662-682 | Code duplication |
+
+### Current Data Flow (Problematic)
+
+```
+CLI Input → cli.ts (parse + resolve provider + execute) → Provider (auth + API + parse) → JSON Output
+```
+
+All three concerns (parsing, business logic, data access) happen in the same call chain within `cli.ts` and providers.
+
+## Recommended Clean Architecture
+
+### Layer Model
+
+For a CLI tool, use a simplified 3-layer Clean Architecture:
+
+| Layer | Responsibility | Contains |
+|-------|---------------|----------|
+| **Presentation** | CLI parsing, output formatting, error serialization | Commander commands, option handlers |
+| **Application** | Business operations, orchestration, validation | Use cases, DTOs, input validators |
+| **Infrastructure** | External integrations | Providers (Gmail/Outlook), storage adapters, config |
+
+**Deliberate simplification:** Domain entities (Email, Folder) live in Infrastructure since this is a data-mapping layer, not a complex domain model. Use cases are the business logic orchestrators.
+
+### Component Boundaries
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                       CLI Layer                              │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  commander  │  │   Output    │  │    Config   │         │
-│  │   (parse)   │  │  (JSONfmt)  │  │  (rc file)  │         │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
+│                    PRESENTATION LAYER                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │ ListCommand │  │ ReadCommand │  │ SendCommand │  ...    │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘          │
 │         │                │                │                  │
-├─────────┴────────────────┴────────────────┴──────────────────┤
-│                    Command Handlers                            │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
-│  │   List   │  │   Read   │  │  Search  │  │  Send    │     │
-│  │  Emails  │  │  Email   │  │          │  │  Email   │     │
-│  └──────┬───┘  └──────┬───┘  └──────┬───┘  └──────┬───┘     │
-│         │              │              │              │        │
-├─────────┴──────────────┴──────────────┴──────────────┴────────┤
-│                   Provider Service Layer                      │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────┐    ┌─────────────────────┐         │
-│  │  Gmail Provider     │    │  Outlook Provider   │         │
-│  │  (googleapis)       │    │  (MS Graph)          │         │
-│  └──────────┬──────────┘    └──────────┬──────────┘         │
-│             │                          │                     │
-├─────────────┴──────────────────────────┴─────────────────────┤
-│                     Transport Layer                             │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   OAuth2    │  │    HTTP      │  │  Credential │         │
-│  │   Manager   │  │   Client     │  │    Store    │         │
-│  │             │  │  (Bun APIs)  │  │  (keytar)   │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-└─────────────────────────────────────────────────────────────┘
+│         └────────────────┼────────────────┘                  │
+│                          ▼                                   │
+│              ┌───────────────────────┐                      │
+│              │    UseCaseExecutor    │  ← DI container      │
+│              │  (receives injected   │                      │
+│              │   use case + output   │                      │
+│              │      presenter)        │                      │
+│              └───────────┬───────────┘                      │
+└──────────────────────────┼──────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────┼──────────────────────────────────┐
+│                    APPLICATION LAYER                         │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              EmailUseCases (interface)               │    │
+│  │  - listEmails(folder, limit): Promise<EmailListDTO>  │    │
+│  │  - readEmail(id): Promise<EmailDTO>                  │    │
+│  │  - sendEmail(dto): Promise<SendResultDTO>            │    │
+│  │  - searchEmails(query, limit): Promise<EmailListDTO> │    │
+│  │  - markAsRead/UNread(ids, flag): Promise<BatchResult>│    │
+│  │  - moveToFolder(ids, folder): Promise<BatchResult>    │    │
+│  │  - deleteEmails(ids): Promise<BatchResult>           │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              AccountUseCases (interface)             │    │
+│  │  - listAccounts(): Promise<AccountDTO[]>             │    │
+│  │  - addAccount(provider): Promise<AccountDTO>         │    │
+│  │  - removeAccount(id): Promise<void>                  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ ListEmailsUC │  │ ReadEmailUC  │  │ SendEmailUC  │ ...   │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+└──────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                   INFRASTRUCTURE LAYER                        │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │                 EmailProvider (interface)              │    │
+│  │  - list(folder, limit): Promise<Email[]>             │    │
+│  │  - read(id): Promise<Email>                           │    │
+│  │  - send(dto): Promise<string>                         │    │
+│  │  - ...                                                 │    │
+│  └──────────────────────────────────────────────────────┘    │
+│                           │                                   │
+│         ┌─────────────────┴─────────────────┐                │
+│         ▼                                   ▼                │
+│  ┌──────────────┐                  ┌──────────────┐          │
+│  │GmailProvider │                  │OutlookProvider│         │
+│  └──────────────┘                  └──────────────┘          │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │              TokenStorage (interface)                  │    │
+│  │  - save(email, tokens): Promise<void>                  │    │
+│  │  - get(email): Promise<Tokens | null>                  │    │
+│  │  - delete(email): Promise<void>                        │    │
+│  │  - list(): Promise<string[]>                           │    │
+│  └──────────────────────────────────────────────────────┘    │
+│                           │                                   │
+│                           ▼                                   │
+│              ┌──────────────────────┐                        │
+│              │ JsonFileTokenStorage │ (current impl)         │
+│              └──────────────────────┘                        │
+│                           │                                   │
+│              ┌──────────────────────┐                        │
+│              │  ConfigStorage      │                        │
+│              │  (interface)        │                        │
+│              └──────────────────────┘                        │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+### Key Interfaces (Ports)
 
-| Component | Responsibility | Implementation |
-|-----------|----------------|----------------|
-| CLI Layer (commander) | Parse flags/args, dispatch commands | `commander` package |
-| Output Formatter | Transform responses to JSON arrays | Custom serializer |
-| Command Handlers | Business logic per command | Functions in `src/commands/` |
-| Provider Service | Unified interface over Gmail/Outlook APIs | Provider interface + implementations |
-| OAuth2 Manager | Token lifecycle (get, refresh, revoke) | Custom with googleapis/auth |
-| Credential Store | Secure storage of tokens per account | `keytar` (system keychain) |
-| HTTP Client | Make authenticated API requests | Bun native `fetch` |
-
-## Recommended Project Structure
-
-```
-src/
-├── cli/
-│   ├── index.ts           # CLI entry point, commander setup
-│   ├── commands/         # Command handlers
-│   │   ├── list.ts       # list emails command
-│   │   ├── read.ts       # read email command
-│   │   ├── search.ts     # search command
-│   │   ├── send.ts       # send/compose command
-│   │   ├── reply.ts      # reply command
-│   │   ├── move.ts       # move/trash command
-│   │   └── account.ts    # account management
-│   └── output.ts         # JSON output formatting
-├── providers/
-│   ├── base.ts           # Provider interface/abstract class
-│   ├── gmail.ts          # Gmail API implementation
-│   ├── outlook.ts        # Microsoft Graph implementation
-│   └── types.ts          # Unified types (Email, Folder, etc.)
-├── auth/
-│   ├── oauth.ts          # OAuth2 flow implementation
-│   ├── tokens.ts         # Token storage/retrieval
-│   └── keytar.ts         # Credential store wrapper
-├── http/
-│   └── client.ts         # HTTP client with retry logic
-└── utils/
-    ├── errors.ts         # Custom error types
-    └── validation.ts     # Input validation helpers
-```
-
-### Structure Rationale
-
-- **`cli/`:** Isolates command-line concerns from business logic. Easy to test handlers in isolation.
-- **`providers/`:** Centralizes API differences behind a common interface. Adding a new provider = new file, no changes to commands.
-- **`auth/`:** Separates OAuth complexity. Token management is orthogonal to email operations.
-- **`http/`:** HTTP concerns (retry, timeouts, errors) isolated from provider logic.
-
-## Architectural Patterns
-
-### Pattern 1: Provider Adapter
-
-**What:** A common interface implemented by provider-specific adapters.
-**When to use:** When multiple backends provide equivalent functionality with different APIs.
-**Trade-offs:** Adds abstraction overhead but isolates provider churn.
+**Infrastructure to Application (driven by):**
 
 ```typescript
-// src/providers/base.ts
-interface EmailProvider {
-  listEmails(folder: string, limit?: number): Promise<EmailSummary[]>;
-  getEmail(id: string): Promise<Email>;
-  search(query: string): Promise<EmailSummary[]>;
-  send(email: OutboundEmail): Promise<string>; // returns message ID
-  reply(emailId: string, body: string): Promise<string>;
-  move(emailId: string, folder: string): Promise<void>;
-  delete(emailId: string): Promise<void>;
+// In src/application/ports/email-provider.port.ts
+export interface EmailProviderPort {
+  readonly account: string;
+  readonly provider: "gmail" | "outlook";
+
+  list(folder: string, limit: number): Promise<EmailListResult>;
+  read(id: string): Promise<Email>;
+  readThread(threadId: string): Promise<Email[]>;
+  search(query: string, limit: number): Promise<Email[]>;
+  send(dto: SendEmailDTO): Promise<string>;
+  reply(id: string, dto: SendEmailDTO): Promise<string>;
+  mark(id: string, read: boolean): Promise<void>;
+  move(id: string, folder: string): Promise<void>;
+  delete(id: string): Promise<void>;
+  status(): Promise<MailboxStatus>;
   listFolders(): Promise<Folder[]>;
 }
-```
 
-### Pattern 2: Command Handler
+// In src/application/ports/token-storage.port.ts
+export interface TokenStoragePort {
+  save(email: string, tokens: OAuthTokens): Promise<void>;
+  get(email: string): Promise<OAuthTokens | null>;
+  delete(email: string): Promise<void>;
+  list(): Promise<string[]>;
+}
 
-**What:** Each CLI command is a self-contained handler with clear inputs/outputs.
-**When to use:** CLI tools with multiple discrete operations.
-**Trade-offs:** Simple to understand but can lead to duplication across handlers.
-
-```typescript
-// src/cli/commands/list.ts
-export async function handleList(args: ListArgs): Promise<void> {
-  const provider = await getProviderForAccount(args.account);
-  const emails = await provider.listEmails(args.folder, args.limit);
-  output.json(emails);
+// In src/application/ports/config.port.ts
+export interface ConfigPort {
+  load(): Promise<Config>;
 }
 ```
 
-### Pattern 3: Token Manager with Credential Store
-
-**What:** OAuth tokens stored in system keychain, refreshed automatically.
-**When to use:** Long-running CLI tools that need persistent auth.
-**Trade-offs:** Secure but adds complexity for token lifecycle.
+**Application to Presentation (driven by):**
 
 ```typescript
-// src/auth/tokens.ts
-export class TokenManager {
-  async getValidToken(accountId: string): Promise<AccessToken> {
-    const stored = await keytar.getPassword('mail-cli', accountId);
-    if (stored && !isExpired(stored)) {
-      return stored;
+// In src/application/ports/use-case-executor.port.ts
+export interface UseCaseExecutor {
+  execute<TInput, TOutput>(
+    useCase: EmailUseCase<TInput, TOutput>,
+    input: TInput
+  ): Promise<TOutput>;
+}
+
+export interface OutputPort<T> {
+  success(data: T): void;
+  error(error: AppError): never;
+}
+```
+
+### Dependency Injection Strategy
+
+Use constructor injection with a simple DI container:
+
+```typescript
+// In src/infrastructure/di/container.ts
+export class Container {
+  private providers = new Map<string, EmailProviderPort>();
+  private tokenStorage: TokenStoragePort;
+  private config: ConfigPort;
+
+  constructor() {
+    // Infrastructure setup
+    this.config = new JsonFileConfigStorage();
+    this.tokenStorage = new JsonFileTokenStorage();
+  }
+
+  getProvider(accountId: string): EmailProviderPort {
+    if (!this.providers.has(accountId)) {
+      const provider = createProviderFromAccount(accountId, this.tokenStorage);
+      this.providers.set(accountId, provider);
     }
-    // Refresh token if expired
-    const refreshed = await this.refreshToken(accountId);
-    await keytar.setPassword('mail-cli', accountId, refreshed);
-    return refreshed;
+    return this.providers.get(accountId)!;
+  }
+
+  getTokenStorage(): TokenStoragePort {
+    return this.tokenStorage;
+  }
+
+  getConfig(): ConfigPort {
+    return this.config;
+  }
+
+  // Use case factory
+  createListEmailsUseCase(): ListEmailsUseCase {
+    return new ListEmailsUseCase(
+      (accountId) => this.getProvider(accountId)
+    );
   }
 }
 ```
 
-## Data Flow
-
-### Request Flow (Read Email Example)
+### Proposed Folder Structure
 
 ```
-[User: mail read --id 123 --account gmail]
-    ↓
-[CLI Layer: commander parses flags]
-    ↓
-[Command Handler: read.ts calls getProviderForAccount("gmail")]
-    ↓
-[Token Manager: gets valid OAuth token from keytar]
-    ↓
-[Gmail Provider: makes authenticated API call]
-    ↓
-[HTTP Client: Bun.fetch with retry on 429/503]
-    ↓
-[Gmail API responds with email data]
-    ↓
-[Provider: transforms to unified Email type]
-    ↓
-[Output: JSON array printed to stdout]
+src/
+├── main.ts                          # Entry point
+├── presentation/                   # CLI LAYER
+│   ├── cli.ts                      # Commander setup (thin)
+│   ├── commands/                   # One file per command
+│   │   ├── list-command.ts
+│   │   ├── read-command.ts
+│   │   ├── send-command.ts
+│   │   ├── search-command.ts
+│   │   ├── mark-command.ts
+│   │   ├── move-command.ts
+│   │   ├── delete-command.ts
+│   │   ├── status-command.ts
+│   │   ├── folders-command.ts
+│   │   └── account/
+│   │       ├── index.ts
+│   │       ├── add-command.ts
+│   │       ├── list-command.ts
+│   │       └── remove-command.ts
+│   └── shared/
+│       ├── account-resolver.ts     # Resolves provider from account flag
+│       └── output.ts               # JSON output formatting
+│
+├── application/                    # APPLICATION LAYER
+│   ├── ports/                      # Interface definitions
+│   │   ├── email-provider.port.ts
+│   │   ├── token-storage.port.ts
+│   │   └── config.port.ts
+│   │
+│   ├── email/
+│   │   ├── list-emails.usecase.ts
+│   │   ├── read-email.usecase.ts
+│   │   ├── read-thread.usecase.ts
+│   │   ├── search-emails.usecase.ts
+│   │   ├── send-email.usecase.ts
+│   │   ├── reply.usecase.ts
+│   │   ├── mark.usecase.ts
+│   │   ├── move.usecase.ts
+│   │   ├── delete.usecase.ts
+│   │   ├── status.usecase.ts
+│   │   └── folders.usecase.ts
+│   │
+│   ├── account/
+│   │   ├── add-account.usecase.ts
+│   │   ├── list-accounts.usecase.ts
+│   │   └── remove-account.usecase.ts
+│   │
+│   └── dto/                        # Data Transfer Objects
+│       ├── email.dto.ts
+│       ├── send-email.dto.ts
+│       ├── batch-result.dto.ts
+│       └── account.dto.ts
+│
+├── infrastructure/                 # INFRASTRUCTURE LAYER
+│   ├── di/
+│   │   └── container.ts           # DI container
+│   │
+│   ├── providers/
+│   │   ├── email-provider.ts      # Abstract base class
+│   │   ├── gmail-provider.ts      # Gmail implementation
+│   │   └── outlook-provider.ts   # Outlook implementation
+│   │
+│   ├── auth/
+│   │   ├── google-auth.ts
+│   │   └── outlook-auth.ts
+│   │
+│   ├── storage/
+│   │   ├── token-storage.ts       # Interface
+│   │   └── json-file-token-storage.ts
+│   │
+│   ├── config/
+│   │   ├── config-storage.ts      # Interface
+│   │   └── json-file-config-storage.ts
+│   │
+│   └── email/
+│       ├── composer.ts            # MIME building
+│       └── parser.ts              # Email parsing
+│
+└── domain/                         # (Minimal for CLI)
+    └── types/
+        ├── email.ts               # Email, Attachment, Folder types
+        └── errors.ts              # AppError base class
 ```
 
-### State Management
+## Build Order (Dependency-Aware)
 
-This is a stateless CLI tool. No in-memory state between invocations.
-
-```
-[Each Invocation]
-    ↓ (start)
-[Load credentials from keychain]
-    ↓
-[Execute command with fresh OAuth token]
-    ↓
-[Output JSON]
-    ↓ (end)
-[Process exits — no state retained]
-```
-
-### Key Data Flows
-
-1. **Auth Flow:** `mail account add` → opens browser for OAuth → stores tokens in keytar → confirms success
-2. **Read Flow:** `mail read --id X` → get tokens → call provider API → transform & output JSON
-3. **Send Flow:** `mail send --to X --subject Y --body Z` → get tokens → call send API → output message ID
-4. **Search Flow:** `mail search "from:boss"` → get tokens → call provider search → output matches
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-100 users | Monolithic single-process CLI is fine |
-| 100-10K users | Add request caching (in-memory, TTL-based) |
-| 10K+ users | Consider connection pooling if API rate limits hit |
-
-### Scaling Priorities
-
-1. **First bottleneck:** API rate limits (Gmail: 1B/day, Outlook: 10K/day) — batch operations where possible
-2. **Second bottleneck:** Token refresh latency — pre-refresh tokens before expiry
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Embedding Provider Logic in Commands
-
-**What people do:** Put Gmail API calls directly in command handlers.
-**Why it's wrong:** Mixing concerns makes switching providers impossible and testing hard.
-**Do this instead:** Always go through provider interface.
-
-### Anti-Pattern 2: Storing Tokens in Files/Env
-
-**What people do:** `export OAUTH_TOKEN=xxx` or `~/.mail-cli-tokens`.
-**Why it's wrong:** Tokens in env vars leak via `ps aux`; files are permsulnerable.
-**Do this instead:** Use system keychain via `keytar`.
-
-### Anti-Pattern 3: Provider-Specific Output Schema
-
-**What people do:** Gmail returns `labelIds`, Outlook returns `categories` — expose both.
-**Why it's wrong:** Agents need unified schema to work across providers.
-**Do this instead:** Transform to unified schema in provider adapter.
+| Order | Component | Reason |
+|-------|-----------|--------|
+| 1 | `domain/types` | No dependencies, pure types |
+| 2 | `domain/errors` | Depends only on types |
+| 3 | `application/ports` | Depends on domain types |
+| 4 | `application/dto` | Depends on domain types |
+| 5 | `infrastructure/storage` (interfaces + JSON impl) | Config and token storage |
+| 6 | `infrastructure/auth` | Depends on storage |
+| 7 | `infrastructure/email` (parser, composer) | No external deps |
+| 8 | `infrastructure/providers` (base + implementations) | Depends on auth, email |
+| 9 | `infrastructure/di/container` | Wires everything |
+| 10 | `application/email/use-cases` | Depends on ports |
+| 11 | `application/account/use-cases` | Depends on ports |
+| 12 | `presentation/commands` (shared) | Depends on use cases |
+| 13 | `presentation/commands/*` | Individual commands |
+| 14 | `presentation/cli.ts` | Wires commands together |
+| 15 | `main.ts` | Entry point |
 
 ## Integration Points
 
-### External Services
+### New vs Modified Components
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Gmail API | googleapis client library | OAuth2 via googleapis/auth |
-| Microsoft Graph | REST API via fetch | OAuth2 via MSAL-like flow |
-| System Keychain | keytar | Falls back to file if unavailable |
+| Component | Action | Notes |
+|-----------|--------|-------|
+| `domain/types/email.ts` | **NEW** | Extract Email, Attachment, Folder interfaces from `providers/email-provider.ts` |
+| `domain/errors.ts` | **NEW** | Base `AppError` class, extracted from `utils/errors.ts` |
+| `application/ports/*` | **NEW** | All interface definitions |
+| `application/dto/*` | **NEW** | DTOs for use case inputs/outputs |
+| `application/email/*.usecase.ts` | **NEW** | Use case implementations |
+| `infrastructure/providers/*` | **MODIFY** | Implement `EmailProviderPort` interface |
+| `infrastructure/storage/*` | **NEW** | `TokenStoragePort` implementation |
+| `infrastructure/config/*` | **NEW** | `ConfigPort` implementation |
+| `infrastructure/di/container.ts` | **NEW** | DI container wiring providers to use cases |
+| `presentation/commands/*.ts` | **NEW** | Refactored command handlers (thin) |
+| `cli.ts` | **MODIFY** | Commander setup only, move all logic to use cases |
+| `src/auth/*` | **MODIFY** | Refactor into auth infrastructure |
+| `src/utils/errors.ts` | **DELETE** | Merged into `domain/errors.ts` |
 
-### Internal Boundaries
+### Preserved Components (Minimal Change)
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| CLI ↔ Commands | Direct function calls | Commands are thin wrappers |
-| Commands ↔ Provider | Interface calls | Commands don't know which provider |
-| Provider ↔ HTTP | Bun.fetch | No separate HTTP library needed |
-| Auth ↔ Keytar | Sync get/set | Tokens serialized as JSON |
+| Component | Change | Rationale |
+|-----------|--------|-----------|
+| `src/email/composer.ts` | Move to `infrastructure/email/` | No logic changes needed |
+| `src/email/parser.ts` | Move to `infrastructure/email/` | No logic changes needed |
+| `src/providers/email-provider.ts` | **DELETE** after interface extraction | Replaced by `application/ports/email-provider.port.ts` |
+| `src/providers/gmail-provider.ts` | Implement new interface | Change import path, implement port |
+| `src/providers/outlook-provider.ts` | Implement new interface | Change import path, implement port |
 
-## Build Order Implications
+## Testing Strategy
+
+With proper DI, each layer becomes testable in isolation:
+
+| Test Type | Target | Mock Dependencies |
+|-----------|--------|-------------------|
+| Unit | Use Cases | `EmailProviderPort`, `TokenStoragePort` (mocked) |
+| Unit | Command Handlers | Use cases (mocked) |
+| Integration | Providers | Real API calls (or recorded fixtures) |
+| Integration | Storage | Real filesystem |
+
+```typescript
+// Example: Testing SendEmailUseCase
+class MockEmailProviderPort implements EmailProviderPort {
+  sentEmails: SendEmailDTO[] = [];
+  sendResult = "msg-123";
+
+  async send(dto: SendEmailDTO): Promise<string> {
+    this.sentEmails.push(dto);
+    return this.sendResult;
+  }
+  // ... implement all interface methods
+}
+
+test("SendEmailUseCase calls provider.send with correct DTO", async () => {
+  const mockProvider = new MockEmailProviderPort();
+  const useCase = new SendEmailUseCase(() => mockProvider);
+
+  await useCase.execute({
+    to: ["test@example.com"],
+    subject: "Test",
+    body: "Hello",
+  });
+
+  expect(mockProvider.sentEmails).toHaveLength(1);
+  expect(mockProvider.sentEmails[0].to).toEqual(["test@example.com"]);
+});
+```
+
+## Data Flow Changes
+
+### Current (Monolithic)
 
 ```
-Phase 1: Foundation
-├── Project structure (folders, base types)
-├── Auth layer (OAuth + keytar integration)
-└── Provider interface (abstract base)
-
-Phase 2: Single Provider (Gmail)
-├── Gmail provider implementation
-└── One command (list or read) to validate
-
-Phase 3: Core Commands
-├── list, read, search commands
-├── send command
-└── reply, move, delete commands
-
-Phase 4: Multi-Provider
-├── Outlook provider implementation
-└── Provider selection logic (--account flag)
-
-Phase 5: Polish
-├── Error handling improvements
-├── Output formatting
-└── Edge cases (attachments, folders)
+CLI arg parsing → cli.ts (resolve provider + call) → provider (auth + API call + parse) → JSON
 ```
 
-### Key Dependency Chain
+### Target (Layered)
 
 ```
-auth/tokens.ts          (required by)
-  ↓
-providers/base.ts       (required by)
-  ↓
-GmailProvider/OutlookProvider  (required by)
-  ↓
-Command Handlers        (composed in)
-  ↓
-cli/index.ts            (entry point)
+CLI arg parsing → Command Handler → Use Case → Provider → API → JSON
+                        ↓               ↓
+                   (thin, minimal) (business logic,
+                                   validation)
 ```
+
+### Critical Changes for Refactor
+
+1. **`resolveProvider()`** moves from `cli.ts` to a `AccountResolver` in presentation/shared, which uses `TokenStoragePort` to list accounts and determine provider type.
+
+2. **Batch operations** currently duplicated in `cli.ts` (mark/move/delete each have identical error-handling loops) become a single `BatchUseCase` base class.
+
+3. **Error wrapping** (`CLIError` creation) moves from providers to use cases, so providers throw domain-specific errors that use cases translate.
+
+4. **Auth flow** (`getAccessToken()`) becomes an `AuthService` in infrastructure, called by use cases that need it.
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Fat Command Handlers
+
+**What goes wrong:** Moving all logic into `presentation/commands/*.ts` files without extracting to use cases.
+**Why:** Command handlers become a new mess, just in different files.
+**Instead:** Commands should be thin wrappers that delegate to use cases.
+
+### Anti-Pattern 2: Domain Objects in Providers
+
+**What goes wrong:** Providers return raw API responses instead of domain types.
+**Why:** Couples consumers to provider-specific schemas.
+**Instead:** Providers map to domain types (Email, Folder) before returning.
+
+### Anti-Pattern 3: Static Coupling of Providers
+
+**What goes wrong:** `GmailProvider` directly imports `refreshAccessToken` from auth module.
+**Why:** Cannot swap implementations or mock for testing.
+**Instead:** Inject auth as a dependency via constructor.
 
 ## Sources
 
-- CLI email client patterns: mutt/neomutt architecture (training data)
-- aerc email client source structure (training data)
-- googleapis Node.js client patterns (training data)
-- Bun.serve/HTTP patterns: `node_modules/bun-types/docs/**/*.mdx`
-- Provider interface patterns: established Go/Rust CLI email clients (training data)
+- [Clean Architecture Patterns - Robert C. Martin](https://blog.cleancoder.com) — Foundational patterns
+- [Commander.js Best Practices](https://github.com/tj/commander.js) — CLI patterns (verified via source)
+- Current codebase analysis — Verified via source reading
 
 ---
 
-*Architecture research for: CLI Email Client*
-*Researched: 2026-04-04*
+*Architecture research for: mail-cli v1.1 Architecture Refactor*
+*Researched: 2026-04-05*
