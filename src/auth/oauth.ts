@@ -1,10 +1,12 @@
 #!/usr/bin/env bun
-import keytar from "keytar";
 import { google } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
 import { loadConfig } from "../utils";
+import { mkdir, readFile, writeFile, access, readdir, unlink } from "node:fs/promises";
+import { join } from "node:path";
+import * as os from "node:os";
 
-const SERVICE = "mail-cli";
+const TOKENS_DIR = join(os.homedir(), ".emailcli", "tokens");
 
 const SCOPES = [
 	"https://www.googleapis.com/auth/gmail.modify",
@@ -87,34 +89,70 @@ export async function getAccessToken(): Promise<{
 }
 
 /**
- * Save tokens to keytar for a given email account
+ * Ensure the tokens directory exists
+ */
+async function ensureTokensDir(): Promise<void> {
+	try {
+		await access(TOKENS_DIR);
+	} catch {
+		await mkdir(TOKENS_DIR, { recursive: true });
+	}
+}
+
+/**
+ * Get the token file path for a given email account
+ */
+function getTokenFilePath(email: string): string {
+	return join(TOKENS_DIR, `${email}.json`);
+}
+
+/**
+ * Save tokens to a JSON file for a given email account
  */
 export async function saveTokens(email: string, tokens: object): Promise<void> {
-	await keytar.setPassword(SERVICE, email, JSON.stringify(tokens));
+	await ensureTokensDir();
+	const filePath = getTokenFilePath(email);
+	await writeFile(filePath, JSON.stringify(tokens), "utf-8");
 }
 
 /**
- * Get tokens from keytar for a given email account
+ * Get tokens from a JSON file for a given email account
  */
 export async function getTokens(email: string): Promise<object | null> {
-	const tokenJson = await keytar.getPassword(SERVICE, email);
-	if (!tokenJson) return null;
-	return JSON.parse(tokenJson);
+	const filePath = getTokenFilePath(email);
+	try {
+		const content = await readFile(filePath, "utf-8");
+		return JSON.parse(content);
+	} catch {
+		return null;
+	}
 }
 
 /**
- * Delete tokens from keytar for a given email account
+ * Delete tokens from a JSON file for a given email account
  */
 export async function deleteTokens(email: string): Promise<void> {
-	await keytar.deletePassword(SERVICE, email);
+	const filePath = getTokenFilePath(email);
+	try {
+		await unlink(filePath);
+	} catch {
+		// File doesn't exist, nothing to delete
+	}
 }
 
 /**
- * List all accounts stored in keytar
+ * List all accounts stored in the tokens directory
  */
 export async function listAccounts(): Promise<string[]> {
-	const credentials = await keytar.findCredentials(SERVICE);
-	return credentials.map((cred) => cred.account);
+	await ensureTokensDir();
+	try {
+		const files = await readdir(TOKENS_DIR);
+		return files
+			.filter((file) => file.endsWith(".json"))
+			.map((file) => file.replace(/\.json$/, ""));
+	} catch {
+		return [];
+	}
 }
 
 /**
