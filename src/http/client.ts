@@ -1,3 +1,4 @@
+import { DEFAULT_TIMEOUT_MS, HTTP_BACKOFF_MS } from "../utils/constants.js";
 import { CLIError } from "../utils/errors.js";
 
 export interface RequestOptions extends RequestInit {
@@ -8,9 +9,9 @@ export async function fetchWithRetry(
 	url: string,
 	options: RequestOptions = {},
 	retries = 3,
-	backoff = 1000,
+	backoff = HTTP_BACKOFF_MS,
 ): Promise<Response> {
-	const { timeout = 30000, ...fetchOptions } = options;
+	const { timeout = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
 
 	for (let attempt = 0; attempt <= retries; attempt++) {
 		try {

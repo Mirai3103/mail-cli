@@ -1,17 +1,18 @@
 #!/usr/bin/env bun
-import { google } from "googleapis";
-import type { OAuth2Client } from "google-auth-library";
-import { loadConfig } from "../utils";
 import {
-	mkdir,
-	readFile,
-	writeFile,
 	access,
+	mkdir,
 	readdir,
+	readFile,
 	unlink,
+	writeFile,
 } from "node:fs/promises";
-import { join } from "node:path";
 import * as os from "node:os";
+import { join } from "node:path";
+import type { OAuth2Client } from "google-auth-library";
+import { google } from "googleapis";
+import { loadConfig } from "../utils";
+import { OAUTH_LOCALHOST_PORT } from "../utils/constants.js";
 
 const TOKENS_DIR = join(os.homedir(), ".emailcli", "tokens");
 
@@ -26,7 +27,7 @@ export async function initOAuthClient() {
 	oauth2Client = new google.auth.OAuth2(
 		config.gmail.clientId,
 		config.gmail.clientSecret,
-		"http://localhost:8080",
+		`http://localhost:${OAUTH_LOCALHOST_PORT}`,
 	);
 }
 /**
@@ -55,7 +56,7 @@ export async function getAccessToken(): Promise<{
 	console.log("\nAfter authorizing, paste the verification code here:");
 
 	// Read verification code from stdin
-	const readline = await import("readline");
+	const readline = await import("node:readline");
 	const rl = readline.createInterface({
 		input: process.stdin,
 		output: process.stdout,

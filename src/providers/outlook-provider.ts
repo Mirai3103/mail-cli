@@ -1,12 +1,17 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 import { refreshOutlookToken } from "../auth/outlook-oauth.js";
+import {
+	DEFAULT_PAGE_LIMIT,
+	MAX_PAGE_LIMIT,
+	MIN_PAGE_LIMIT,
+} from "../utils/constants.js";
 import { CLIError } from "../utils/errors.js";
 import {
-	EmailProvider,
+	type Attachment,
 	type Email,
+	EmailProvider,
 	type Folder,
 	type SendEmailOptions,
-	type Attachment,
 } from "./email-provider.js";
 
 export class OutlookProvider extends EmailProvider {
@@ -78,9 +83,9 @@ export class OutlookProvider extends EmailProvider {
 
 	async list(
 		folder: string = "Inbox",
-		limit: number = 20,
+		limit: number = DEFAULT_PAGE_LIMIT,
 	): Promise<{ emails: Email[]; nextPageToken?: string }> {
-		const safeLimit = Math.min(Math.max(1, limit), 100);
+		const safeLimit = Math.min(Math.max(MIN_PAGE_LIMIT, limit), MAX_PAGE_LIMIT);
 
 		try {
 			const client = await this.getClient();
@@ -269,8 +274,11 @@ export class OutlookProvider extends EmailProvider {
 		}
 	}
 
-	async search(query: string, limit: number = 20): Promise<Email[]> {
-		const safeLimit = Math.min(Math.max(1, limit), 100);
+	async search(
+		query: string,
+		limit: number = DEFAULT_PAGE_LIMIT,
+	): Promise<Email[]> {
+		const safeLimit = Math.min(Math.max(MIN_PAGE_LIMIT, limit), MAX_PAGE_LIMIT);
 
 		try {
 			const client = await this.getClient();

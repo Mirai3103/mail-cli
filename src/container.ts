@@ -1,5 +1,16 @@
-import { GmailProvider, OutlookProvider, TokenStorageImpl, ConfigImpl } from "./infrastructure/index.js";
-import { MailboxService, EmailService, ComposeService, AccountService } from "./services/index.js";
+import {
+	ConfigImpl,
+	GmailProvider,
+	OutlookProvider,
+	TokenStorageImpl,
+} from "./infrastructure/index.js";
+import {
+	AccountService,
+	ComposeService,
+	EmailService,
+	MailboxService,
+} from "./services/index.js";
+import { LogLevel, logger } from "./services/logger.js";
 
 // Token storage and config are singletons (stateless)
 const tokenStorage = new TokenStorageImpl();
@@ -10,25 +21,35 @@ const accountService = new AccountService(tokenStorage, config);
 
 // Provider factory based on account
 function createProvider(account: string) {
-  if (account.endsWith(":gmail")) {
-    return new GmailProvider(account);
-  } else if (account.endsWith(":outlook")) {
-    return new OutlookProvider(account);
-  }
-  return new GmailProvider(account);
+	if (account.endsWith(":gmail")) {
+		return new GmailProvider(account);
+	} else if (account.endsWith(":outlook")) {
+		return new OutlookProvider(account);
+	}
+	return new GmailProvider(account);
 }
 
 // Service factory - creates services with the right provider per command invocation
 function createMailboxService(provider: GmailProvider | OutlookProvider) {
-  return new MailboxService(provider);
+	return new MailboxService(provider);
 }
 
 function createEmailService(provider: GmailProvider | OutlookProvider) {
-  return new EmailService(provider);
+	return new EmailService(provider);
 }
 
 function createComposeService(provider: GmailProvider | OutlookProvider) {
-  return new ComposeService(provider);
+	return new ComposeService(provider);
 }
 
-export { tokenStorage, config, accountService, createProvider, createMailboxService, createEmailService, createComposeService };
+export {
+	accountService,
+	config,
+	createComposeService,
+	createEmailService,
+	createMailboxService,
+	createProvider,
+	LogLevel,
+	logger,
+	tokenStorage,
+};

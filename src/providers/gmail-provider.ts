@@ -1,14 +1,19 @@
 import { google } from "googleapis";
+import { refreshAccessToken } from "../auth/index.js";
+import { buildRawMessage, buildReplyMessage } from "../email/composer.js";
+import { parseGmailRaw } from "../email/parser.js";
 import {
-	EmailProvider,
+	DEFAULT_PAGE_LIMIT,
+	MAX_PAGE_LIMIT,
+	MIN_PAGE_LIMIT,
+} from "../utils/constants.js";
+import { CLIError } from "../utils/errors.js";
+import {
 	type Email,
+	EmailProvider,
 	type Folder,
 	type SendEmailOptions,
 } from "./email-provider.js";
-import { refreshAccessToken } from "../auth/index.js";
-import { CLIError } from "../utils/errors.js";
-import { parseGmailRaw } from "../email/parser.js";
-import { buildRawMessage, buildReplyMessage } from "../email/composer.js";
 
 export class GmailProvider extends EmailProvider {
 	readonly provider = "gmail";
@@ -37,10 +42,10 @@ export class GmailProvider extends EmailProvider {
 
 	async list(
 		folder: string = "INBOX",
-		limit: number = 20,
+		limit: number = DEFAULT_PAGE_LIMIT,
 	): Promise<{ emails: Email[]; nextPageToken?: string }> {
 		// Validate limit per D-03 (max 100)
-		const safeLimit = Math.min(Math.max(1, limit), 100);
+		const safeLimit = Math.min(Math.max(MIN_PAGE_LIMIT, limit), MAX_PAGE_LIMIT);
 
 		try {
 			const accessToken = await this.getAuthToken();
@@ -173,9 +178,12 @@ export class GmailProvider extends EmailProvider {
 		}
 	}
 
-	async search(query: string, limit: number = 20): Promise<Email[]> {
+	async search(
+		query: string,
+		limit: number = DEFAULT_PAGE_LIMIT,
+	): Promise<Email[]> {
 		// D-09: limit capped at 100
-		const safeLimit = Math.min(Math.max(1, limit), 100);
+		const safeLimit = Math.min(Math.max(MIN_PAGE_LIMIT, limit), MAX_PAGE_LIMIT);
 
 		try {
 			const accessToken = await this.getAuthToken();
