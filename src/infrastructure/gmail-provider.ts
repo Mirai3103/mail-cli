@@ -481,6 +481,19 @@ export class GmailProvider implements EmailProviderPort {
 
 			const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
+			// First get message to find attachment metadata (mimeType is in parts, not in attachment response)
+			const msgResponse = await gmail.users.messages.get({
+				userId: "me",
+				id: messageId,
+				format: "FULL",
+			});
+
+			// Find attachment metadata in message parts
+			const attachmentMeta = this.findAttachmentInParts(
+				msgResponse.data.payload?.parts || [],
+				attachmentId,
+			);
+
 			// Fetch attachment content from Gmail API
 			const response = await gmail.users.messages.attachments.get({
 				userId: "me",
@@ -493,10 +506,13 @@ export class GmailProvider implements EmailProviderPort {
 			// Decode base64 to Buffer
 			const decoded = Buffer.from(data, "base64");
 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const meta = attachmentMeta as any;
 			return {
 				content: decoded,
 				filename: filename,
-				mimeType: response.data.mimeType || "application/octet-stream",
+				mimeType:
+					meta?.mimeType || "application/octet-stream",
 				size: response.data.size
 					? parseInt(String(response.data.size), 10)
 					: decoded.length,
@@ -509,5 +525,29 @@ export class GmailProvider implements EmailProviderPort {
 				err,
 			);
 		}
+	}
+
+	/**
+	 * Recursively find attachment metadata in message parts.
+	 */
+	private findAttachmentInParts(
+		parts: unknown[],
+		attachmentId: string,
+	): unknown | null {
+		for (const part of parts) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const partObj = part as any;
+			if (partObj.body?.attachmentId === attachmentId) {
+				return part;
+			}
+			if (partObj.parts) {
+				const found = this.findAttachmentInParts(
+					partObj.parts,
+					attachmentId,
+				);
+				if (found) return found;
+			}
+		}
+		return null;
 	}
 }

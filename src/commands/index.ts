@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { registerAccountCommand } from "./account.js";
 import { registerDeleteCommand } from "./delete.js";
+import { registerDraftsCommand } from "./drafts.js";
 import { registerFoldersCommand } from "./folders.js";
 import { registerListCommand } from "./list.js";
 import { registerMarkCommand } from "./mark.js";
@@ -23,4 +24,5 @@ export function registerCommands(program: Command) {
 	registerMoveCommand(program);
 	registerDeleteCommand(program);
 	registerAccountCommand(program);
+	registerDraftsCommand(program);
 }

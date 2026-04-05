@@ -48,3 +48,16 @@ export interface AttachmentDownloadResult {
 	mimeType: string;
 	size: number;
 }
+
+export interface Draft {
+	id: string;
+	account: string;
+	to: string[];
+	cc?: string[];
+	bcc?: string[];
+	subject: string;
+	body: string;
+	attachments: string[];
+	createdAt: string;
+	updatedAt: string;
+}

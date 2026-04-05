@@ -7,6 +7,7 @@ import {
 import {
 	AccountService,
 	ComposeService,
+	DraftService,
 	EmailService,
 	MailboxService,
 } from "./services/index.js";
@@ -18,6 +19,9 @@ const config = new ConfigImpl();
 
 // AccountService is stateless, instantiated once
 const accountService = new AccountService(tokenStorage, config);
+
+// DraftService is stateless, instantiated once
+const draftService = new DraftService();
 
 // Provider factory based on account
 function createProvider(account: string) {
@@ -49,6 +53,7 @@ export {
 	createEmailService,
 	createMailboxService,
 	createProvider,
+	draftService,
 	LogLevel,
 	logger,
 	tokenStorage,
