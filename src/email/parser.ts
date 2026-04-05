@@ -1,4 +1,9 @@
-import { simpleParser, type ParsedMail, type AddressObject, type EmailAddress } from "mailparser";
+import {
+	simpleParser,
+	type ParsedMail,
+	type AddressObject,
+	type EmailAddress,
+} from "mailparser";
 import type { Email, Attachment } from "../providers/email-provider.js";
 
 /**
@@ -30,29 +35,40 @@ export async function parseGmailRaw(
 	const parsed: ParsedMail = await simpleParser(raw);
 
 	// D-03: Extract body.text, falling back to html if no plain text
-	const bodyText =
-		parsed.text || parsed.html || "";
+	const bodyText = parsed.text || parsed.html || "";
 
 	// D-03: Extract attachments array
 	const attachments: Attachment[] =
-		parsed.attachments?.map((att: { filename?: string; contentType?: string; size?: number }, idx: number) => ({
-			id: String(idx),
-			filename: att.filename || "attachment",
-			mimeType: att.contentType || "application/octet-stream",
-			size: att.size || 0,
-		})) || [];
+		parsed.attachments?.map(
+			(
+				att: { filename?: string; contentType?: string; size?: number },
+				idx: number,
+			) => ({
+				id: String(idx),
+				filename: att.filename || "attachment",
+				mimeType: att.contentType || "application/octet-stream",
+				size: att.size || 0,
+			}),
+		) || [];
 
 	// Extract address headers using mailparser's Address objects
 	// from and to can be AddressObject | AddressObject[] | undefined
-	function getAddress(addressObj: AddressObject | AddressObject[] | undefined): string {
+	function getAddress(
+		addressObj: AddressObject | AddressObject[] | undefined,
+	): string {
 		if (!addressObj) return "";
-		if (Array.isArray(addressObj)) return addressObj[0]?.value[0]?.address || "";
+		if (Array.isArray(addressObj))
+			return addressObj[0]?.value[0]?.address || "";
 		return addressObj.value[0]?.address || "";
 	}
-	function getAddresses(addressObj: AddressObject | AddressObject[] | undefined): string[] {
+	function getAddresses(
+		addressObj: AddressObject | AddressObject[] | undefined,
+	): string[] {
 		if (!addressObj) return [];
 		if (Array.isArray(addressObj)) {
-			return addressObj.flatMap((ao: AddressObject) => ao.value.map((a: EmailAddress) => a.address || ""));
+			return addressObj.flatMap((ao: AddressObject) =>
+				ao.value.map((a: EmailAddress) => a.address || ""),
+			);
 		}
 		return addressObj.value.map((a: EmailAddress) => a.address || "");
 	}

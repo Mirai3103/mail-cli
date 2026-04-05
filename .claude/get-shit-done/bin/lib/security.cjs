@@ -190,10 +190,14 @@ function scanForInjection(text, opts = {}) {
 			);
 		}
 
-		// Check for extremely long strings that could be prompt stuffing
-		if (text.length > 50000) {
+		// Check for extremely long strings that could be prompt stuffing.
+		// Normalize CRLF → LF before measuring so Windows checkouts don't inflate the count.
+		const normalizedLength = text
+			.replace(/\r\n/g, "\n")
+			.replace(/\r/g, "\n").length;
+		if (normalizedLength > 50000) {
 			findings.push(
-				`Suspicious text length: ${text.length} chars (potential prompt stuffing)`,
+				`Suspicious text length: ${normalizedLength} chars (potential prompt stuffing)`,
 			);
 		}
 	}

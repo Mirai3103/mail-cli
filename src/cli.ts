@@ -6,12 +6,16 @@ import {
 	getAccessToken,
 	listAccounts,
 	deleteTokens,
-	saveTokens,initOAuthClient
+	saveTokens,
+	initOAuthClient,
 } from "./auth/index.js";
-import { getOutlookAuthToken, initOutlookClient} from "./auth/outlook-oauth.js";
+import {
+	getOutlookAuthToken,
+	initOutlookClient,
+} from "./auth/outlook-oauth.js";
 import type { Email } from "./providers/email-provider.js";
-import { GmailProvider } from "./providers/gmail-provider.js";
-import { OutlookProvider } from "./providers/outlook-provider.js";
+import type { GmailProvider } from "./providers/gmail-provider.js";
+import type { OutlookProvider } from "./providers/outlook-provider.js";
 import { CLIError, printError } from "./utils/errors.js";
 
 const program = new Command();
@@ -140,7 +144,10 @@ program
 						const accounts = await listAccounts();
 						const outlookAccount = accounts.find((a) => a.endsWith(":outlook"));
 						if (!outlookAccount) {
-							throw new CLIError("OUTLOOK_AUTH_ERROR", "Failed to get Outlook account after authentication");
+							throw new CLIError(
+								"OUTLOOK_AUTH_ERROR",
+								"Failed to get Outlook account after authentication",
+							);
 						}
 
 						console.log(
@@ -205,11 +212,12 @@ program
 program
 	.command("list")
 	.description("List emails in a folder")
+	.option("--account <id>", "Account ID (email:provider format)")
 	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
+		"--folder <name>",
+		"Folder/label to list (default: Inbox/INBOX)",
+		"Inbox",
 	)
-	.option("--folder <name>", "Folder/label to list (default: Inbox/INBOX)", "Inbox")
 	.option(
 		"--limit <number>",
 		"Maximum number of emails to return (default: 20, max: 100)",
@@ -242,10 +250,7 @@ program
 program
 	.command("status")
 	.description("Get mailbox status (unread and total message counts)")
-	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
-	)
+	.option("--account <id>", "Account ID (email:provider format)")
 	.action(async (options) => {
 		try {
 			const provider = await resolveProvider(options.account);
@@ -264,10 +269,7 @@ program
 program
 	.command("folders")
 	.description("List all available folders/labels")
-	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
-	)
+	.option("--account <id>", "Account ID (email:provider format)")
 	.action(async (options) => {
 		try {
 			const provider = await resolveProvider(options.account);
@@ -287,10 +289,7 @@ program
 	.command("read")
 	.description("Read a single email or thread")
 	.argument("<id>", "Email ID or thread ID")
-	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
-	)
+	.option("--account <id>", "Account ID (email:provider format)")
 	.option("--thread", "Read all messages in thread (use thread ID as argument)")
 	.action(async (id, options) => {
 		try {
@@ -316,14 +315,8 @@ program
 program
 	.command("search")
 	.description("Search emails using provider search syntax")
-	.argument(
-		"<query>",
-		"Search query (Gmail syntax for Gmail, KQL for Outlook)",
-	)
-	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
-	)
+	.argument("<query>", "Search query (Gmail syntax for Gmail, KQL for Outlook)")
+	.option("--account <id>", "Account ID (email:provider format)")
 	.option(
 		"--limit <number>",
 		"Maximum results to return (default: 20, max: 100)",
@@ -355,10 +348,7 @@ program
 program
 	.command("send")
 	.description("Send a new email")
-	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
-	)
+	.option("--account <id>", "Account ID (email:provider format)")
 	.requiredOption(
 		"--to <addresses>",
 		"Recipient email addresses (comma-separated)",
@@ -444,10 +434,7 @@ program
 	.command("reply")
 	.description("Reply to an existing email (with empty body)")
 	.argument("<id>", "ID of message to reply to")
-	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
-	)
+	.option("--account <id>", "Account ID (email:provider format)")
 	.requiredOption("--to <addresses>", "Reply recipients (comma-separated)")
 	.option("--cc <addresses>", "CC recipients (comma-separated)")
 	.option("--bcc <addresses>", "BCC recipients (comma-separated)")
@@ -486,11 +473,11 @@ program
 	.command("mark")
 	.description("Mark email as read or unread")
 	.argument("[id]", "Email ID (use --ids for batch)")
+	.option("--account <id>", "Account ID (email:provider format)")
 	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
+		"--ids <list>",
+		"Comma-separated list of email IDs (e.g., --ids 1,2,3)",
 	)
-	.option("--ids <list>", "Comma-separated list of email IDs (e.g., --ids 1,2,3)")
 	.option("--read", "Mark as read")
 	.option("--unread", "Mark as unread")
 	.action(async (id, options) => {
@@ -515,9 +502,15 @@ program
 			// D-01: Parse --ids into array
 			let ids: string[] = [];
 			if (options.ids) {
-				ids = options.ids.split(",").map((s: string) => s.trim()).filter(Boolean);
+				ids = options.ids
+					.split(",")
+					.map((s: string) => s.trim())
+					.filter(Boolean);
 				if (ids.length === 0) {
-					throw new CLIError("INVALID_IDS", "--ids must contain at least one ID");
+					throw new CLIError(
+						"INVALID_IDS",
+						"--ids must contain at least one ID",
+					);
 				}
 			} else if (id) {
 				ids = [id];
@@ -526,15 +519,24 @@ program
 			}
 
 			// D-02: Batch operation with partial failure tracking
-			const failed: Array<{id: string; error: {code: string; message: string}}> = [];
+			const failed: Array<{
+				id: string;
+				error: { code: string; message: string };
+			}> = [];
 			for (const emailId of ids) {
 				try {
 					await provider.mark(emailId, isRead);
 				} catch (err) {
 					if (err instanceof CLIError) {
-						failed.push({ id: emailId, error: { code: err.code, message: err.message } });
+						failed.push({
+							id: emailId,
+							error: { code: err.code, message: err.message },
+						});
 					} else {
-						failed.push({ id: emailId, error: { code: "UNKNOWN", message: (err as Error).message } });
+						failed.push({
+							id: emailId,
+							error: { code: "UNKNOWN", message: (err as Error).message },
+						});
 					}
 				}
 			}
@@ -556,11 +558,11 @@ program
 	.command("move")
 	.description("Move email to a folder/label")
 	.argument("[id]", "Email ID (use --ids for batch)")
+	.option("--account <id>", "Account ID (email:provider format)")
 	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
+		"--ids <list>",
+		"Comma-separated list of email IDs (e.g., --ids 1,2,3)",
 	)
-	.option("--ids <list>", "Comma-separated list of email IDs (e.g., --ids 1,2,3)")
 	.requiredOption(
 		"--folder <name>",
 		"Target folder/label name (provider-native)",
@@ -572,9 +574,15 @@ program
 			// D-01: Parse --ids into array
 			let ids: string[] = [];
 			if (options.ids) {
-				ids = options.ids.split(",").map((s: string) => s.trim()).filter(Boolean);
+				ids = options.ids
+					.split(",")
+					.map((s: string) => s.trim())
+					.filter(Boolean);
 				if (ids.length === 0) {
-					throw new CLIError("INVALID_IDS", "--ids must contain at least one ID");
+					throw new CLIError(
+						"INVALID_IDS",
+						"--ids must contain at least one ID",
+					);
 				}
 			} else if (id) {
 				ids = [id];
@@ -583,15 +591,24 @@ program
 			}
 
 			// D-02: Batch operation with partial failure tracking
-			const failed: Array<{id: string; error: {code: string; message: string}}> = [];
+			const failed: Array<{
+				id: string;
+				error: { code: string; message: string };
+			}> = [];
 			for (const emailId of ids) {
 				try {
 					await provider.move(emailId, options.folder);
 				} catch (err) {
 					if (err instanceof CLIError) {
-						failed.push({ id: emailId, error: { code: err.code, message: err.message } });
+						failed.push({
+							id: emailId,
+							error: { code: err.code, message: err.message },
+						});
 					} else {
-						failed.push({ id: emailId, error: { code: "UNKNOWN", message: (err as Error).message } });
+						failed.push({
+							id: emailId,
+							error: { code: "UNKNOWN", message: (err as Error).message },
+						});
 					}
 				}
 			}
@@ -613,11 +630,11 @@ program
 	.command("delete")
 	.description("Move email to trash")
 	.argument("[id]", "Email ID (use --ids for batch)")
+	.option("--account <id>", "Account ID (email:provider format)")
 	.option(
-		"--account <id>",
-		"Account ID (email:provider format)",
+		"--ids <list>",
+		"Comma-separated list of email IDs (e.g., --ids 1,2,3)",
 	)
-	.option("--ids <list>", "Comma-separated list of email IDs (e.g., --ids 1,2,3)")
 	.action(async (id, options) => {
 		try {
 			const provider = await resolveProvider(options.account);
@@ -625,9 +642,15 @@ program
 			// D-01: Parse --ids into array
 			let ids: string[] = [];
 			if (options.ids) {
-				ids = options.ids.split(",").map((s: string) => s.trim()).filter(Boolean);
+				ids = options.ids
+					.split(",")
+					.map((s: string) => s.trim())
+					.filter(Boolean);
 				if (ids.length === 0) {
-					throw new CLIError("INVALID_IDS", "--ids must contain at least one ID");
+					throw new CLIError(
+						"INVALID_IDS",
+						"--ids must contain at least one ID",
+					);
 				}
 			} else if (id) {
 				ids = [id];
@@ -636,15 +659,24 @@ program
 			}
 
 			// D-02: Batch operation with partial failure tracking
-			const failed: Array<{id: string; error: {code: string; message: string}}> = [];
+			const failed: Array<{
+				id: string;
+				error: { code: string; message: string };
+			}> = [];
 			for (const emailId of ids) {
 				try {
 					await provider.delete(emailId);
 				} catch (err) {
 					if (err instanceof CLIError) {
-						failed.push({ id: emailId, error: { code: err.code, message: err.message } });
+						failed.push({
+							id: emailId,
+							error: { code: err.code, message: err.message },
+						});
 					} else {
-						failed.push({ id: emailId, error: { code: "UNKNOWN", message: (err as Error).message } });
+						failed.push({
+							id: emailId,
+							error: { code: "UNKNOWN", message: (err as Error).message },
+						});
 					}
 				}
 			}

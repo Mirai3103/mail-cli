@@ -1,7 +1,13 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 import { refreshOutlookToken } from "../auth/outlook-oauth.js";
 import { CLIError } from "../utils/errors.js";
-import { EmailProvider, type Email, type Folder, type SendEmailOptions, type Attachment } from "./email-provider.js";
+import {
+	EmailProvider,
+	type Email,
+	type Folder,
+	type SendEmailOptions,
+	type Attachment,
+} from "./email-provider.js";
 
 export class OutlookProvider extends EmailProvider {
 	readonly provider = "outlook";
@@ -61,8 +67,11 @@ export class OutlookProvider extends EmailProvider {
 		const client = await this.getClient();
 		const folders = await client.api("/me/mailFolders").get();
 		const folder = folders.value.find(
-			(f: { displayName: string; childFolderCount: number; wellKnownName?: string }) =>
-				f.displayName === name || f.wellKnownName === name,
+			(f: {
+				displayName: string;
+				childFolderCount: number;
+				wellKnownName?: string;
+			}) => f.displayName === name || f.wellKnownName === name,
 		);
 		return folder?.id || null;
 	}
@@ -192,7 +201,9 @@ export class OutlookProvider extends EmailProvider {
 				.api(`/me/messages`)
 				.filter(`conversationId eq '${localThreadId}'`)
 				.orderby("receivedDateTime asc")
-				.select("id,conversationId,subject,from,toRecipients,sentDateTime,receivedDateTime,body,hasAttachments,attachments")
+				.select(
+					"id,conversationId,subject,from,toRecipients,sentDateTime,receivedDateTime,body,hasAttachments,attachments",
+				)
 				.get();
 
 			const emails: Email[] = await Promise.all(
@@ -207,12 +218,22 @@ export class OutlookProvider extends EmailProvider {
 						receivedDateTime: string;
 						body?: { content?: string };
 						hasAttachments: boolean;
-						attachments?: { id: string; name: string; contentType: string; size: number }[];
+						attachments?: {
+							id: string;
+							name: string;
+							contentType: string;
+							size: number;
+						}[];
 					}) => {
 						let attachments: Attachment[] | undefined;
 						if (msg.hasAttachments && msg.attachments) {
 							attachments = msg.attachments.map(
-								(att: { id: string; name: string; contentType: string; size: number }) => ({
+								(att: {
+									id: string;
+									name: string;
+									contentType: string;
+									size: number;
+								}) => ({
 									id: att.id,
 									filename: att.name,
 									mimeType: att.contentType,
@@ -225,7 +246,8 @@ export class OutlookProvider extends EmailProvider {
 							threadId: this.addPrefix(msg.conversationId),
 							from: msg.from.emailAddress.address,
 							to: msg.toRecipients.map(
-								(r: { emailAddress: { address: string } }) => r.emailAddress.address,
+								(r: { emailAddress: { address: string } }) =>
+									r.emailAddress.address,
 							),
 							subject: msg.subject || "",
 							date: msg.receivedDateTime,
@@ -385,9 +407,7 @@ export class OutlookProvider extends EmailProvider {
 			const client = await this.getClient();
 			const localId = this.stripPrefix(id);
 
-			await client
-				.api(`/me/messages/${localId}`)
-				.patch({ isRead: read });
+			await client.api(`/me/messages/${localId}`).patch({ isRead: read });
 		} catch (err) {
 			if (err instanceof CLIError) throw err;
 			throw new CLIError(
@@ -487,11 +507,7 @@ export class OutlookProvider extends EmailProvider {
 			return folders;
 		} catch (err) {
 			if (err instanceof CLIError) throw err;
-			throw new CLIError(
-				"OUTLOOK_API_ERROR",
-				"Failed to list folders",
-				err,
-			);
+			throw new CLIError("OUTLOOK_API_ERROR", "Failed to list folders", err);
 		}
 	}
 }

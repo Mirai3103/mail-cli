@@ -2,7 +2,14 @@
 import { google } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
 import { loadConfig } from "../utils";
-import { mkdir, readFile, writeFile, access, readdir, unlink } from "node:fs/promises";
+import {
+	mkdir,
+	readFile,
+	writeFile,
+	access,
+	readdir,
+	unlink,
+} from "node:fs/promises";
 import { join } from "node:path";
 import * as os from "node:os";
 
@@ -13,7 +20,7 @@ const SCOPES = [
 	"https://www.googleapis.com/auth/userinfo.email",
 ];
 
-let oauth2Client :OAuth2Client;
+let oauth2Client: OAuth2Client;
 export async function initOAuthClient() {
 	const config = await loadConfig();
 	oauth2Client = new google.auth.OAuth2(

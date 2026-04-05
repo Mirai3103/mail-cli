@@ -24,6 +24,7 @@ const {
 	output,
 	error,
 	checkAgentsInstalled,
+	phaseTokenMatches,
 } = require("./core.cjs");
 
 function getLatestCompletedMilestone(cwd) {
@@ -56,10 +57,17 @@ function withProjectRoot(cwd, result) {
 	const agentStatus = checkAgentsInstalled();
 	result.agents_installed = agentStatus.agents_installed;
 	result.missing_agents = agentStatus.missing_agents;
+	// Inject response_language into all init outputs (#1399).
+	// Workflows propagate this to subagent prompts so user-facing questions
+	// stay in the configured language across phase boundaries.
+	const config = loadConfig(cwd);
+	if (config.response_language) {
+		result.response_language = config.response_language;
+	}
 	return result;
 }
 
-function cmdInitExecutePhase(cwd, phase, raw) {
+function cmdInitExecutePhase(cwd, phase, raw, options = {}) {
 	if (!phase) {
 		error("phase required for init execute-phase");
 	}
@@ -141,6 +149,7 @@ function cmdInitExecutePhase(cwd, phase, raw) {
 		branch_name:
 			config.branching_strategy === "phase" && phaseInfo
 				? config.phase_branch_template
+						.replace("{project}", config.project_code || "")
 						.replace("{phase}", phaseInfo.phase_number)
 						.replace("{slug}", phaseInfo.phase_slug || "phase")
 				: config.branching_strategy === "milestone"
@@ -173,10 +182,51 @@ function cmdInitExecutePhase(cwd, phase, raw) {
 		),
 	};
 
+	// Optional --validate: run state validation and include warnings (#1627)
+	if (options.validate) {
+		try {
+			const { cmdStateValidate } = require("./state.cjs");
+			// Capture validate output by temporarily redirecting
+			const statePath = path.join(planningDir(cwd), "STATE.md");
+			if (fs.existsSync(statePath)) {
+				const stateContent = fs.readFileSync(statePath, "utf-8");
+				const { stateExtractField } = require("./state.cjs");
+				const status = stateExtractField(stateContent, "Status") || "";
+				result.state_validation_ran = true;
+				// Simple inline validation — check for obvious drift
+				const warnings = [];
+				const phasesPath = planningPaths(cwd).phases;
+				if (
+					phaseInfo &&
+					phaseInfo.directory &&
+					fs.existsSync(path.join(cwd, phaseInfo.directory))
+				) {
+					const files = fs.readdirSync(path.join(cwd, phaseInfo.directory));
+					const diskPlans = files.filter((f) => f.match(/-PLAN\.md$/i)).length;
+					const totalPlansRaw = stateExtractField(
+						stateContent,
+						"Total Plans in Phase",
+					);
+					const totalPlansInPhase = totalPlansRaw
+						? parseInt(totalPlansRaw, 10)
+						: null;
+					if (totalPlansInPhase !== null && diskPlans !== totalPlansInPhase) {
+						warnings.push(
+							`Plan count mismatch: STATE.md says ${totalPlansInPhase}, disk has ${diskPlans}`,
+						);
+					}
+				}
+				result.state_warnings = warnings;
+			}
+		} catch {
+			/* intentionally empty */
+		}
+	}
+
 	output(withProjectRoot(cwd, result), raw);
 }
 
-function cmdInitPlanPhase(cwd, phase, raw) {
+function cmdInitPlanPhase(cwd, phase, raw, options = {}) {
 	if (!phase) {
 		error("phase required for init plan-phase");
 	}
@@ -318,6 +368,38 @@ function cmdInitPlanPhase(cwd, phase, raw) {
 		}
 	}
 
+	// Optional --validate: run state validation and include warnings (#1627)
+	if (options.validate) {
+		try {
+			const statePath = path.join(planningDir(cwd), "STATE.md");
+			if (fs.existsSync(statePath)) {
+				const { stateExtractField } = require("./state.cjs");
+				const stateContent = fs.readFileSync(statePath, "utf-8");
+				const warnings = [];
+				result.state_validation_ran = true;
+				const totalPlansRaw = stateExtractField(
+					stateContent,
+					"Total Plans in Phase",
+				);
+				const totalPlansInPhase = totalPlansRaw
+					? parseInt(totalPlansRaw, 10)
+					: null;
+				if (
+					totalPlansInPhase !== null &&
+					phaseInfo &&
+					totalPlansInPhase !== (phaseInfo.plans?.length || 0)
+				) {
+					warnings.push(
+						`Plan count mismatch: STATE.md says ${totalPlansInPhase}, disk has ${phaseInfo.plans?.length || 0}`,
+					);
+				}
+				result.state_warnings = warnings;
+			}
+		} catch {
+			/* intentionally empty */
+		}
+	}
+
 	output(withProjectRoot(cwd, result), raw);
 }
 
@@ -379,6 +461,7 @@ function cmdInitNewProject(cwd, raw) {
 			".git",
 			".planning",
 			".claude",
+			".codex",
 			"__pycache__",
 			"target",
 			"dist",
@@ -994,6 +1077,7 @@ function cmdInitMapCodebase(cwd, raw) {
 		commit_docs: config.commit_docs,
 		search_gitignored: config.search_gitignored,
 		parallelization: config.parallelization,
+		subagent_timeout: config.subagent_timeout,
 
 		// Paths
 		codebase_dir: ".planning/codebase",
@@ -1019,10 +1103,10 @@ function cmdInitManager(cwd, raw) {
 
 	// Validate prerequisites
 	if (!fs.existsSync(paths.roadmap)) {
-		error("No ROADMAP.md found. Run /gsd:new-milestone first.");
+		error("No ROADMAP.md found. Run /gsd-new-milestone first.");
 	}
 	if (!fs.existsSync(paths.state)) {
-		error("No STATE.md found. Run /gsd:new-milestone first.");
+		error("No STATE.md found. Run /gsd-new-milestone first.");
 	}
 	const rawContent = fs.readFileSync(paths.roadmap, "utf-8");
 	const content = extractCurrentMilestone(rawContent, cwd);
@@ -1069,9 +1153,7 @@ function cmdInitManager(cwd, raw) {
 				.filter((e) => e.isDirectory())
 				.map((e) => e.name)
 				.filter(isDirInMilestone);
-			const dirMatch = dirs.find(
-				(d) => d.startsWith(normalized + "-") || d === normalized,
-			);
+			const dirMatch = dirs.find((d) => phaseTokenMatches(d, normalized));
 
 			if (dirMatch) {
 				const fullDir = path.join(phasesDir, dirMatch);
@@ -1202,9 +1284,11 @@ function cmdInitManager(cwd, raw) {
 	}
 
 	// Compute recommended actions (execute > plan > discuss)
+	// Skip BACKLOG phases (999.x numbering) — they are parked ideas, not active work
 	const recommendedActions = [];
 	for (const phase of phases) {
 		if (phase.disk_status === "complete") continue;
+		if (/^999(?:\.|$)/.test(phase.number)) continue;
 
 		if (phase.disk_status === "planned" && phase.deps_satisfied) {
 			recommendedActions.push({
@@ -1212,7 +1296,7 @@ function cmdInitManager(cwd, raw) {
 				phase_name: phase.name,
 				action: "execute",
 				reason: `${phase.plan_count} plans ready, dependencies met`,
-				command: `/gsd:execute-phase ${phase.number}`,
+				command: `/gsd-execute-phase ${phase.number}`,
 			});
 		} else if (
 			phase.disk_status === "discussed" ||
@@ -1223,7 +1307,7 @@ function cmdInitManager(cwd, raw) {
 				phase_name: phase.name,
 				action: "plan",
 				reason: "Context gathered, ready for planning",
-				command: `/gsd:plan-phase ${phase.number}`,
+				command: `/gsd-plan-phase ${phase.number}`,
 			});
 		} else if (
 			(phase.disk_status === "empty" || phase.disk_status === "no_directory") &&
@@ -1234,7 +1318,7 @@ function cmdInitManager(cwd, raw) {
 				phase_name: phase.name,
 				action: "discuss",
 				reason: "Unblocked, ready to gather context",
-				command: `/gsd:discuss-phase ${phase.number}`,
+				command: `/gsd-discuss-phase ${phase.number}`,
 			});
 		}
 	}
@@ -1287,6 +1371,39 @@ function cmdInitManager(cwd, raw) {
 	const completedCount = phases.filter(
 		(p) => p.disk_status === "complete",
 	).length;
+
+	// Read manager flags from config (passthrough flags for each step)
+	// Validate: flags must be CLI-safe (only --flags, alphanumeric, hyphens, spaces)
+	const sanitizeFlags = (raw) => {
+		const val = typeof raw === "string" ? raw : "";
+		if (!val) return "";
+		// Allow only --flag patterns with alphanumeric/hyphen values separated by spaces
+		const tokens = val.split(/\s+/).filter(Boolean);
+		const safe = tokens.every(
+			(t) =>
+				/^--[a-zA-Z0-9][-a-zA-Z0-9]*$/.test(t) ||
+				/^[a-zA-Z0-9][-a-zA-Z0-9_.]*$/.test(t),
+		);
+		if (!safe) {
+			process.stderr.write(
+				`gsd-tools: warning: manager.flags contains invalid tokens, ignoring: ${val}\n`,
+			);
+			return "";
+		}
+		return val;
+	};
+	const managerFlags = {
+		discuss: sanitizeFlags(
+			config.manager && config.manager.flags && config.manager.flags.discuss,
+		),
+		plan: sanitizeFlags(
+			config.manager && config.manager.flags && config.manager.flags.plan,
+		),
+		execute: sanitizeFlags(
+			config.manager && config.manager.flags && config.manager.flags.execute,
+		),
+	};
+
 	const result = {
 		milestone_version: milestone.version,
 		milestone_name: milestone.name,
@@ -1302,6 +1419,7 @@ function cmdInitManager(cwd, raw) {
 		project_exists: pathExistsInternal(cwd, ".planning/PROJECT.md"),
 		roadmap_exists: true,
 		state_exists: true,
+		manager_flags: managerFlags,
 	};
 
 	output(withProjectRoot(cwd, result), raw);

@@ -15,7 +15,7 @@ export async function initOutlookClient() {
 async function ensureCacheDir(): Promise<void> {
 	try {
 		await mkdir(CACHE_DIR, { recursive: true });
-	} catch { }
+	} catch {}
 }
 
 /**
@@ -161,11 +161,14 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 				// Update keytar with fresh tokens (MSAL cache is updated automatically)
 				await saveTokens(keytarAccount, {
 					accessToken: refreshResult.accessToken,
-					refreshToken: refreshResult.account?.homeAccountId || tokenObj.refreshToken,
+					refreshToken:
+						refreshResult.account?.homeAccountId || tokenObj.refreshToken,
 					expiresAt: refreshResult.expiresOn?.getTime(),
 					tenantId: refreshResult.tenantId,
-					homeAccountId: refreshResult.account?.homeAccountId || tokenObj.homeAccountId,
-					localAccountId: refreshResult.account?.localAccountId || tokenObj.localAccountId,
+					homeAccountId:
+						refreshResult.account?.homeAccountId || tokenObj.homeAccountId,
+					localAccountId:
+						refreshResult.account?.localAccountId || tokenObj.localAccountId,
 				});
 				return refreshResult.accessToken;
 			}
@@ -189,8 +192,10 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 			refreshToken: authResult.account?.homeAccountId || tokenObj.refreshToken,
 			expiresAt: authResult.expiresOn?.getTime(),
 			tenantId: authResult.tenantId,
-			homeAccountId: authResult.account?.homeAccountId || tokenObj.homeAccountId,
-			localAccountId: authResult.account?.localAccountId || tokenObj.localAccountId,
+			homeAccountId:
+				authResult.account?.homeAccountId || tokenObj.homeAccountId,
+			localAccountId:
+				authResult.account?.localAccountId || tokenObj.localAccountId,
 		});
 		return authResult.accessToken;
 	}
@@ -201,7 +206,9 @@ export async function refreshOutlookToken(email: string): Promise<string> {
 /**
  * Get the user's email address from Microsoft Graph API /me endpoint.
  */
-export async function getOutlookUserEmail(accessToken: string): Promise<string> {
+export async function getOutlookUserEmail(
+	accessToken: string,
+): Promise<string> {
 	const response = await fetch("https://graph.microsoft.com/v1.0/me", {
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
@@ -209,9 +216,14 @@ export async function getOutlookUserEmail(accessToken: string): Promise<string> 
 	});
 
 	if (!response.ok) {
-		throw new Error(`Failed to get user email from Outlook: ${response.status}`);
+		throw new Error(
+			`Failed to get user email from Outlook: ${response.status}`,
+		);
 	}
 
-	const data = (await response.json()) as { mail?: string; userPrincipalName?: string };
+	const data = (await response.json()) as {
+		mail?: string;
+		userPrincipalName?: string;
+	};
 	return data.mail || data.userPrincipalName || "";
 }
