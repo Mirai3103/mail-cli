@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: MVP
-status: v1.0 milestone complete
-last_updated: "2026-04-05T03:42:43.576Z"
+milestone: v1.1
+milestone_name: Architecture Refactor
+status: defining requirements
+last_updated: "2026-04-05"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # mail-cli State
@@ -19,11 +19,14 @@ See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** A developer tool that lets you read, compose, search, and manage email from any terminal without leaving your workflow. Zero friction — every action is a single command with flags.
 
-**Current focus:** Planning next milestone
+**Current focus:** v1.1 Architecture Refactor — defining requirements
 
 ## Current Position
 
-**v1.0 MVP shipped** — all 6 phases complete, all 18 v1 requirements validated.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-05 — Milestone v1.1 started
 
 ## Quick Tasks Completed
 
@@ -49,6 +52,7 @@ See: .planning/PROJECT.md (updated 2026-04-05)
 | 9 | 2026-04-04 | Quick task: fix all TypeScript errors (npx tsc exits 0) |
 | 10 | 2026-04-05 | Quick task: remove keytar, use plain JSON file storage in ~/.emailcli/tokens/ |
 | 11 | 2026-04-05 | v1.0 MVP milestone completed |
+| 12 | 2026-04-05 | v1.1 Architecture Refactor milestone started |
 
 ---
 

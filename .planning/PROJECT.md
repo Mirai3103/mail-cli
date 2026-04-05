@@ -1,5 +1,21 @@
 # mail-cli
 
+## Current Milestone: v1.1 Architecture Refactor
+
+**Goal:** Restructure CLI app for maintainability, modularity, and testability while preserving the existing CLI experience unchanged.
+
+**Target features:**
+- Folder restructuring: Clean separation of CLI commands, business logic, and data layer
+- Clean Architecture: Lightweight layered architecture with dependency injection
+- Dependency injection: Services and data clients injectable for unit testing
+- Unit & integration tests: ≥80% coverage for business logic and critical features
+- Centralized logging + global error handling: Consistent, debuggable error flows
+- Code quality: Remove magic numbers, enforce ESLint + Prettier
+- CI/CD pipeline: Automated linting and test execution
+- Documentation: Updated docs with architecture diagram
+- Attachment download: Save attachments to local filesystem (ORG-06)
+- Draft management: Save/load/edit drafts (SEND-05)
+
 ## What This Is
 
 A fast, interactive command-line email client designed for automation and AI agent workflows. Users and agents interact entirely through command-line flags — no interactive prompts, no TUI. Targets Gmail first, Outlook second, with a unified command interface that abstracts provider differences behind a consistent JSON output schema.
@@ -60,7 +76,26 @@ A developer tool that lets you read, compose, search, and manage email from any 
 | Online-only | Avoids sync complexity for V1 | ✓ Validated |
 | Plain JSON token storage | Replaced keytar to reduce native dependency footprint | ✓ Validated (Phase 6 quick fix) |
 | MSAL device code flow for Outlook | CLI-friendly, no redirect needed | ✓ Validated |
-| Dynamic provider loading | Lazy-load providers for startup optimization | ✓ Validated |
+| Clean Architecture refactor | Lightweight layered architecture for testability | In Progress |
+| Dependency injection | Injectable services and data clients | In Progress |
+| CI/CD pipeline | Automated linting and test execution | In Progress |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
 
