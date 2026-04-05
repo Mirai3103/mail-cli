@@ -20,7 +20,7 @@ export function registerReadCommand(program: Command) {
 		)
 		.action(async (id, options) => {
 			try {
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 				const emailService = createEmailService(provider);
 
 				let result: unknown;

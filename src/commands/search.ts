@@ -18,7 +18,7 @@ export function registerSearchCommand(program: Command) {
 		)
 		.action(async (query, options) => {
 			try {
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 				const emailService = createEmailService(provider);
 
 				const limit = parseInt(options.limit, 10);

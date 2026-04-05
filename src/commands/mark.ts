@@ -29,7 +29,7 @@ export function registerMarkCommand(program: Command) {
 					);
 				}
 
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 				const isRead = !!options.read;
 
 				let ids: string[] = [];

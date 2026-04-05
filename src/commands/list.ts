@@ -19,7 +19,7 @@ export function registerListCommand(program: Command) {
 		)
 		.action(async (options) => {
 			try {
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 				const mailboxService = createMailboxService(provider);
 
 				const limit = parseInt(options.limit, 10);

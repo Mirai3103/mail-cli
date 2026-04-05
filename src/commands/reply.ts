@@ -12,7 +12,7 @@ export function registerReplyCommand(program: Command) {
 		.option("--bcc <addresses>", "BCC recipients (comma-separated)")
 		.action(async (id, options) => {
 			try {
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 				const composeService = createComposeService(provider);
 
 				const to = options.to.split(",").map((s: string) => s.trim());

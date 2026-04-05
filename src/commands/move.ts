@@ -18,7 +18,7 @@ export function registerMoveCommand(program: Command) {
 		)
 		.action(async (id, options) => {
 			try {
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 
 				let ids: string[] = [];
 				if (options.ids) {

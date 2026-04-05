@@ -44,15 +44,27 @@ export function registerAccountCommand(program: Command) {
 	accountCmd
 		.command("remove")
 		.description("Remove an email account")
-		.requiredOption("--account <id>", "Account ID (email:provider format)")
+		.option("--account <id>", "Account ID (email:provider format)")
 		.option("--all", "Remove all connected accounts")
 		.action(async (options) => {
 			try {
+				if (!options.account && !options.all) {
+					throw new CLIError(
+						"MISSING_FLAG",
+						"Either --account <id> or --all is required",
+					);
+				}
+				if (options.account && options.all) {
+					throw new CLIError(
+						"CONFLICTING_FLAGS",
+						"Cannot use both --account and --all",
+					);
+				}
 				if (options.all) {
 					const result = await accountService.removeAllAccounts();
 					console.log(JSON.stringify(result));
 				} else {
-					const result = await accountService.removeAccount(options.account);
+					const result = await accountService.removeAccount(options.account!);
 					console.log(JSON.stringify(result));
 				}
 			} catch (err) {

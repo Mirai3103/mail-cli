@@ -26,7 +26,7 @@ export function registerSendCommand(program: Command) {
 		.option("--draft <id>", "Load an existing draft by ID and send")
 		.action(async (options) => {
 			try {
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 				const composeService = createComposeService(provider);
 
 				// Determine account for draft operations

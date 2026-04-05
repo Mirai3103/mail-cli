@@ -8,7 +8,7 @@ export function registerFoldersCommand(program: Command) {
 		.option("--account <id>", "Account ID (email:provider format)")
 		.action(async (options) => {
 			try {
-				const provider = await createProvider(options.account);
+				const provider = await createProvider(options.account || "default:gmail");
 				const mailboxService = createMailboxService(provider);
 				const result = await mailboxService.listFolders();
 				console.log(JSON.stringify(result));
