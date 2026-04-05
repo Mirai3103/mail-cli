@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Milestone complete
-last_updated: "2026-04-04T17:15:45.206Z"
+last_updated: "2026-04-05T00:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 6
@@ -74,6 +74,7 @@ Plan: Not started
 | 260404-wos | Fix Outlook OAuth invalid_grant error | 2026-04-04 | d63c734 | [260404-wos-fix-outlook-oauth-invalid-grant-error](./quick/260404-wos-fix-outlook-oauth-invalid-grant-error/) |
 | 260405-096 | Create Gmail and Outlook OAuth setup docs | 2026-04-05 | 3868632 | [260405-096-create-setup-docs-for-gmail-and-outlook-](./quick/260405-096-create-setup-docs-for-gmail-and-outlook-/) |
 | 260405-0d4 | fix all typescript error , npx tsc | 2026-04-04 | 28c22da | [260405-0d4-fix-all-typescript-error-npx-tsc](./quick/260405-0d4-fix-all-typescript-error-npx-tsc/) |
+| 260405-dbh | Remove keytar, use plain JSON file storage | 2026-04-05 | 2a91d24 | [260405-dbh-remove-keytar-just-save-plain-credential](./quick/260405-dbh-remove-keytar-just-save-plain-credential/) |
 
 ## Accumulated Context
 
@@ -91,7 +92,7 @@ Plan: Not started
 - readThread() fetches each message individually since threads.get doesn't support RAW format
 - send()/reply() use nodemailer MailComposer with base64url encoding for Gmail API
 - MSAL device code flow for Outlook OAuth2 (CLI-friendly, no redirect needed)
-- Token storage uses email:outlook keytar account format per D-07
+- Token storage uses plain JSON files in ~/.emailcli/tokens/ (replaced keytar per 260405-dbh)
 - OUTLOOK_SCOPES = Mail.Read, Mail.Send, Mail.ReadBasic, User.Read, offline_access
 - Config at ~/.emailcli/config.json with auto-create and env var override (D-04, D-05, D-06)
 
@@ -125,7 +126,8 @@ None identified yet.
 | 7 | 2026-04-04 | Quick task: fix Outlook OAuth invalid_grant (MSAL cache persistence, keytar account suffix fix) |
 | 8 | 2026-04-05 | Quick task: create Gmail and Outlook OAuth setup docs |
 | 9 | 2026-04-04 | Quick task: fix all TypeScript errors (npx tsc exits 0) |
+| 10 | 2026-04-05 | Quick task: remove keytar, use plain JSON file storage in ~/.emailcli/tokens/ |
 
 ---
 
-*State last updated: 2026-04-04*
+*State last updated: 2026-04-05*
