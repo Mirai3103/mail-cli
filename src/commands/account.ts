@@ -1,11 +1,6 @@
 import type { Command } from "commander";
 import { accountService } from "../container.js";
-
-function _getProviderFromAccount(account: string): string {
-	if (account.endsWith(":gmail")) return "gmail";
-	if (account.endsWith(":outlook")) return "outlook";
-	return "gmail";
-}
+import { CLIError } from "../utils/errors.js";
 
 export function registerAccountCommand(program: Command) {
 	const accountCmd = program
