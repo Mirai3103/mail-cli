@@ -2,10 +2,10 @@ import * as fs from "node:fs/promises";
 import type { Command } from "commander";
 import {
 	createComposeService,
-	createProvider,
 	draftService,
 } from "../container.js";
 import { CLIError } from "../utils/errors.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 
 export function registerSendCommand(program: Command) {
 	program
@@ -26,11 +26,11 @@ export function registerSendCommand(program: Command) {
 		.option("--draft <id>", "Load an existing draft by ID and send")
 		.action(async (options) => {
 			try {
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 				const composeService = createComposeService(provider);
 
-				// Determine account for draft operations
-				const account = options.account || "default:gmail";
+				// Use provider's account for draft operations
+				const account = provider.account;
 
 				// --draft <id> loads existing draft
 				if (options.draft) {

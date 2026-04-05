@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { createComposeService, createProvider } from "../container.js";
+import { createComposeService } from "../container.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 
 export function registerReplyCommand(program: Command) {
 	program
@@ -12,7 +13,7 @@ export function registerReplyCommand(program: Command) {
 		.option("--bcc <addresses>", "BCC recipients (comma-separated)")
 		.action(async (id, options) => {
 			try {
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 				const composeService = createComposeService(provider);
 
 				const to = options.to.split(",").map((s: string) => s.trim());

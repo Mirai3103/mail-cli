@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { createEmailService, createProvider } from "../container.js";
+import { createEmailService } from "../container.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 import { CLIError } from "../utils/errors.js";
 
 export function registerSearchCommand(program: Command) {
@@ -18,7 +19,7 @@ export function registerSearchCommand(program: Command) {
 		)
 		.action(async (query, options) => {
 			try {
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 				const emailService = createEmailService(provider);
 
 				const limit = parseInt(options.limit, 10);

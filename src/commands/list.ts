@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { createMailboxService, createProvider } from "../container.js";
+import { createMailboxService } from "../container.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 import { CLIError } from "../utils/errors.js";
 
 export function registerListCommand(program: Command) {
@@ -19,7 +20,7 @@ export function registerListCommand(program: Command) {
 		)
 		.action(async (options) => {
 			try {
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 				const mailboxService = createMailboxService(provider);
 
 				const limit = parseInt(options.limit, 10);

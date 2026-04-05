@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { createMailboxService, createProvider } from "../container.js";
+import { createMailboxService } from "../container.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 
 export function registerStatusCommand(program: Command) {
 	program
@@ -8,7 +9,7 @@ export function registerStatusCommand(program: Command) {
 		.option("--account <id>", "Account ID (email:provider format)")
 		.action(async (options) => {
 			try {
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 				const mailboxService = createMailboxService(provider);
 				const result = await mailboxService.status();
 				console.log(JSON.stringify(result));

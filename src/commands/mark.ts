@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { createProvider } from "../container.js";
 import { CLIError } from "../utils/errors.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 
 export function registerMarkCommand(program: Command) {
 	program
@@ -29,7 +29,7 @@ export function registerMarkCommand(program: Command) {
 					);
 				}
 
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 				const isRead = !!options.read;
 
 				let ids: string[] = [];

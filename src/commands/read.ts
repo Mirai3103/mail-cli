@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { createEmailService, createProvider } from "../container.js";
+import { createEmailService } from "../container.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Email } from "../types/domain.js";
@@ -20,7 +21,7 @@ export function registerReadCommand(program: Command) {
 		)
 		.action(async (id, options) => {
 			try {
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 				const emailService = createEmailService(provider);
 
 				let result: unknown;

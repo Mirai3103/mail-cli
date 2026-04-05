@@ -1,8 +1,8 @@
 import {
 	GmailProvider,
-	listAccounts,
 	OutlookProvider,
 } from "../../infrastructure/index.js";
+import { listAccounts } from "../../auth/index.js";
 import { CLIError } from "../../utils/errors.js";
 
 export function getProviderFromAccount(account: string): string {

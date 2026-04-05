@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { createProvider } from "../container.js";
 import { CLIError } from "../utils/errors.js";
+import { resolveProvider } from "./utils/resolve-provider.js";
 
 export function registerDeleteCommand(program: Command) {
 	program
@@ -14,7 +14,7 @@ export function registerDeleteCommand(program: Command) {
 		)
 		.action(async (id, options) => {
 			try {
-				const provider = await createProvider(options.account || "default:gmail");
+				const provider = await resolveProvider(options.account);
 
 				let ids: string[] = [];
 				if (options.ids) {

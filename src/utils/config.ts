@@ -48,6 +48,13 @@ export async function ensureConfigDir(): Promise<void> {
 		// Directory doesn't exist, create it
 		await fs.mkdir(configDir, { recursive: true });
 	}
+	// check if config file exists, if not create it with default config
+	try {
+		await fs.access(configPath);
+	} catch {
+		// Config file doesn't exist, create it with default config
+		await fs.writeFile(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2));
+	}
 }
 
 /**
@@ -62,7 +69,7 @@ export async function ensureConfigDir(): Promise<void> {
  */
 export async function loadConfig(): Promise<Config> {
 	const configPath = getConfigPath();
-
+	
 	// Check if config file exists
 	let config: Config;
 
