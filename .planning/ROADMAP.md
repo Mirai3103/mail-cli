@@ -126,7 +126,10 @@ v1.1 restructures the CLI app for maintainability, modularity, and testability w
   2. User can run `mail-cli drafts --list` to see saved drafts
   3. User can pass `--draft <id>` to compose command to load and edit existing draft
   4. User can run `mail-cli drafts --delete <id>` to remove a draft
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 12-01-PLAN.md — Draft storage service and data model
+- [ ] 12-02-PLAN.md — Draft commands (list, delete)
+- [ ] 12-03-PLAN.md — Send command draft integration (save-draft, load-draft)
 
 ## Progress
 
@@ -146,7 +149,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 9. Logging, Error Handling & Code Quality | v1.1 | 3/3 | Complete | 2026-04-05 |
 | 10. CI/CD Pipeline & Documentation | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 11. Attachment Download | v1.1 | 2/2 | Complete | 2026-04-05 |
-| 12. Draft Management | v1.1 | 0/? | Not started | - |
+| 12. Draft Management | v1.1 | 0/3 | Not started | - |
 
 ---
 
