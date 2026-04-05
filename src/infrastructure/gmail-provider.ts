@@ -1,10 +1,15 @@
 import { google } from "googleapis";
-import type { EmailProviderPort } from "../types/ports.js";
-import type { Email, Folder, SendEmailOptions } from "../types/domain.js";
 import { refreshAccessToken } from "../auth/index.js";
-import { CLIError } from "../utils/errors.js";
-import { parseGmailRaw } from "../email/parser.js";
 import { buildRawMessage, buildReplyMessage } from "../email/composer.js";
+import { parseGmailRaw } from "../email/parser.js";
+import type { Email, Folder, SendEmailOptions } from "../types/domain.js";
+import type { EmailProviderPort } from "../types/ports.js";
+import { CLIError } from "../utils/errors.js";
+import {
+	DEFAULT_PAGE_LIMIT,
+	MAX_PAGE_LIMIT,
+	MIN_PAGE_LIMIT,
+} from "../utils/constants.js";
 
 export class GmailProvider implements EmailProviderPort {
 	readonly provider = "gmail";
@@ -32,10 +37,10 @@ export class GmailProvider implements EmailProviderPort {
 
 	async list(
 		folder: string = "INBOX",
-		limit: number = 20,
+		limit: number = DEFAULT_PAGE_LIMIT,
 	): Promise<{ emails: Email[]; nextPageToken?: string }> {
 		// Validate limit per D-03 (max 100)
-		const safeLimit = Math.min(Math.max(1, limit), 100);
+		const safeLimit = Math.min(Math.max(MIN_PAGE_LIMIT, limit), MAX_PAGE_LIMIT);
 
 		try {
 			const accessToken = await this.getAuthToken();
@@ -170,7 +175,7 @@ export class GmailProvider implements EmailProviderPort {
 
 	async search(query: string, limit: number = 20): Promise<Email[]> {
 		// D-09: limit capped at 100
-		const safeLimit = Math.min(Math.max(1, limit), 100);
+		const safeLimit = Math.min(Math.max(MIN_PAGE_LIMIT, limit), MAX_PAGE_LIMIT);
 
 		try {
 			const accessToken = await this.getAuthToken();
@@ -258,7 +263,16 @@ export class GmailProvider implements EmailProviderPort {
 		}
 	}
 
-	async reply(id: string, msg: { to: string[]; cc?: string[]; bcc?: string[]; subject: string; body: string }): Promise<string> {
+	async reply(
+		id: string,
+		msg: {
+			to: string[];
+			cc?: string[];
+			bcc?: string[];
+			subject: string;
+			body: string;
+		},
+	): Promise<string> {
 		try {
 			const accessToken = await this.getAuthToken();
 			const oauth2Client = new google.auth.OAuth2();
