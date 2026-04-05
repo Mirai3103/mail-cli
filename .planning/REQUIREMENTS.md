@@ -95,41 +95,41 @@ Not in scope for v1.1. Deferred for future milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 1 | Pending |
-| ARCH-02 | Phase 1 | Pending |
-| ARCH-03 | Phase 1 | Pending |
-| ARCH-04 | Phase 1 | Pending |
-| DI-01 | Phase 1 | Pending |
-| DI-02 | Phase 1 | Pending |
-| DI-03 | Phase 1 | Pending |
-| TEST-01 | Phase 2 | Pending |
-| TEST-02 | Phase 2 | Pending |
-| TEST-03 | Phase 2 | Pending |
-| TEST-04 | Phase 2 | Pending |
-| TEST-05 | Phase 2 | Pending |
-| TEST-06 | Phase 2 | Pending |
-| LOG-01 | Phase 3 | Pending |
-| LOG-02 | Phase 3 | Pending |
-| LOG-03 | Phase 3 | Pending |
-| LOG-04 | Phase 3 | Pending |
-| QUAL-01 | Phase 3 | Pending |
-| QUAL-02 | Phase 3 | Pending |
-| QUAL-03 | Phase 3 | Pending |
-| QUAL-04 | Phase 3 | Pending |
-| CICD-01 | Phase 4 | Pending |
-| CICD-02 | Phase 4 | Pending |
-| CICD-03 | Phase 4 | Pending |
-| DOCS-01 | Phase 4 | Pending |
-| DOCS-02 | Phase 4 | Pending |
-| DOCS-03 | Phase 4 | Pending |
-| ORG-06 | Phase 5 | Pending |
-| ORG-06a | Phase 5 | Pending |
-| ORG-06b | Phase 5 | Pending |
-| ORG-06c | Phase 5 | Pending |
-| SEND-05 | Phase 6 | Pending |
-| SEND-05a | Phase 6 | Pending |
-| SEND-05b | Phase 6 | Pending |
-| SEND-05c | Phase 6 | Pending |
+| ARCH-01 | Phase 7 | Pending |
+| ARCH-02 | Phase 7 | Pending |
+| ARCH-03 | Phase 7 | Pending |
+| ARCH-04 | Phase 7 | Pending |
+| DI-01 | Phase 7 | Pending |
+| DI-02 | Phase 7 | Pending |
+| DI-03 | Phase 7 | Pending |
+| TEST-01 | Phase 8 | Pending |
+| TEST-02 | Phase 8 | Pending |
+| TEST-03 | Phase 8 | Pending |
+| TEST-04 | Phase 8 | Pending |
+| TEST-05 | Phase 8 | Pending |
+| TEST-06 | Phase 8 | Pending |
+| LOG-01 | Phase 9 | Pending |
+| LOG-02 | Phase 9 | Pending |
+| LOG-03 | Phase 9 | Pending |
+| LOG-04 | Phase 9 | Pending |
+| QUAL-01 | Phase 9 | Pending |
+| QUAL-02 | Phase 9 | Pending |
+| QUAL-03 | Phase 9 | Pending |
+| QUAL-04 | Phase 9 | Pending |
+| CICD-01 | Phase 10 | Pending |
+| CICD-02 | Phase 10 | Pending |
+| CICD-03 | Phase 10 | Pending |
+| DOCS-01 | Phase 10 | Pending |
+| DOCS-02 | Phase 10 | Pending |
+| DOCS-03 | Phase 10 | Pending |
+| ORG-06 | Phase 11 | Pending |
+| ORG-06a | Phase 11 | Pending |
+| ORG-06b | Phase 11 | Pending |
+| ORG-06c | Phase 11 | Pending |
+| SEND-05 | Phase 12 | Pending |
+| SEND-05a | Phase 12 | Pending |
+| SEND-05b | Phase 12 | Pending |
+| SEND-05c | Phase 12 | Pending |
 
 **Coverage:**
 - v1 requirements: 32 total
@@ -138,4 +138,4 @@ Not in scope for v1.1. Deferred for future milestones.
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after v1.1 milestone initialization*
+*Last updated: 2026-04-05 after v1.1 roadmap created*
